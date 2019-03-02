@@ -1,0 +1,225 @@
+#include <iostream>
+#include <cstdlib> /* 亂數相關函數 */
+#include <ctime>
+#include <fstream>
+#include <vector>
+#include "memory.h"
+#include <time.h>
+#include <string>
+#include <sstream>
+#include <math.h>
+
+int initial();//初始化 
+int openchess();//翻棋 
+int chess();//移動 
+int ai();//決定行動 
+int readBoard();//讀檔模式 讀取board.txt 把讀入檔案轉成bitboard 還沒倒著存入 
+int createMovetxt();//創造move.txt 0走步 1翻棋 
+int createMove();
+using namespace std;
+
+typedef unsigned int U32;
+
+int index32[32] = {31, 0, 1, 5, 2, 16, 27, 6, 3, 14, 17, 19, 28, 11, 7, 21, 30, 4, 15, 26, 13,
+18, 10, 20, 29, 25, 12, 9, 24, 8, 23, 22};
+U32 pMoves[32]={0x00000012,0x00000025,0x0000004A,0x00000084,0x00000121,0x00000252,0x000004A4,0x00000848,
+0x00001210,0x00002520,0x00004A40,0x00008480,0x00012100,0x00025200,0x0004A400,0x00084800,
+0x00121000,0x00252000,0x004A4000,0x00848000,0x01210000,0x02520000,0x04A40000,0x08480000,
+0x12100000,0x25200000,0x4A400000,0x84800000,0x21000000,0x52000000,0xA4000000,0x48000000};//旗子移動遮罩
+U32 file[4]={0x11111111,0x22222222,0x44444444,0x88888888};//行遮罩 
+U32 rank[8]={0x0000000F,0x000000F0,0x00000F00,0x0000F000,0x000F0000,0x00F00000,0x0F000000,0xF0000000};//列遮罩 
+
+U32 LS1B(U32 x){ return x&(-x);}//取得x的最低位元
+int BitsHash(U32 x){return (x * 0x08ED2BE6) >> 27;}
+int GetIndex(U32 mask){ return index32[BitsHash(mask)];}//輸入遮罩返回棋盤編號
+
+U32 piece[16]; //0空格- 帥k 士g 相m 車r 馬n 炮c 兵p *2 15未翻x 
+U32 red,black,occupied;//紅 黑 有棋子 
+string move="a1-a1";//下一步行動 用於背景 
+int piece_count[14];//剩餘棋子數 
+string current_position[32];//盤面狀況 
+string history; 
+int timeCount;//剩餘時間 
+int initailBoard=1;//是否讀取初始版面 
+int RMcount=13;//讀取模式需要 從13行開始讀取結果 
+U32 allEatMove[10000][2];//存可吃子的方法 0 src 1 dst
+int AEMindex=0;//alleatmove index
+U32 allOnlyMove[10000][2];//存可移動非吃子的方法 0 src 1 dst
+int AOMindex=0;//allonlymove index
+bool mycolor;//0 red 1 black
+string src,dst;
+
+int main()
+{
+	srand(time(NULL));
+	initial();//初始化 
+	readBoard();
+	int end=1;//結束則=0
+	while(end)
+	{
+		dst="0";
+		ai();//決定行動 
+		createMovetxt();
+		end=0;
+	}
+} 
+
+int ai()
+{
+	if(piece[15]!=0)//沒棋可翻則移動 
+		openchess();
+	else
+		chess();
+}
+
+int chess()
+{
+	U32 dest;//可以吃子的行動
+	AEMindex=0;
+	int ssrc=0;
+	for(int i=1; i<8; i++){ //1~7 為帥~兵,src 為棋子起點,dest 為終點。
+		U32 p = piece[i]; //取得棋子位置
+		while(p){ //將紅色 1~7 號的子都搜尋一遍
+			U32 mask = LS1B(p); //如果該棋子在多個位置,先取低位元的位置。
+			p ^= mask; //除去位於最低位元的該兵種
+			ssrc = GetIndex(mask); //將最低位元的兵種設為走步起點
+			if(i==1) //帥,周圍卒(14)以外的黑子都可以吃。
+				dest = pMoves[ssrc] & ( black ^ piece[14] );
+			else if(i==2) //仕,周圍將(8)以外的黑子都可以吃。
+				dest = pMoves[ssrc] & ( black ^ piece[8] );
+			else if(i==3) //相,周圍將、士以外的黑子都可以吃。	
+				dest = pMoves[ssrc] & ( black ^ piece[8] ^ piece[9] );
+			else if(i==4) //?,只能吃車(11)、馬、炮、卒。
+				dest = pMoves[ssrc] & (piece[11] | piece[12] | piece[13] | piece[14] );	
+			else if(i==5) //傌,只能吃馬(12)、炮、卒。
+				dest = pMoves[ssrc] & (piece[12] | piece[13] | piece[14] );
+			else if(i==6) //炮,特殊處理。
+				;//dest = CGen(ssrc) & black;
+			else if(i==7) //兵,只能吃將(8)、卒(14)。
+				dest = pMoves[ssrc] & (piece[8] | piece[14]);
+			else
+				dest = 0;
+			while(dest){ //如果 dest 有多個位置的話,分開存起來。
+				U32 mask2 = LS1B(dest);
+				dest ^= mask2;
+				U32 result = GetIndex(mask2);
+				allEatMove[AEMindex][0]=ssrc;
+				allEatMove[AEMindex][1]=result;
+				AEMindex++;
+			}
+		}
+	}
+	for(int i=1; i<8; i++){ //1~7 為帥~兵,src 為棋子起點,dest 為終點。
+		U32 p = piece[i]; //取得棋子位置
+		while(p){ //將紅色 1~7 號的子都搜尋一遍
+			U32 mask = LS1B(p); //如果該棋子在多個位置,先取低位元的位置。
+			p ^= mask; //除去位於最低位元的該兵種
+			ssrc = GetIndex(mask); //將最低位元的兵種設為走步起點
+			if(i==1) //帥,周圍卒(14)以外的黑子都可以吃。
+				dest = pMoves[ssrc] & ( black ^ piece[14] );
+			else if(i==2) //仕,周圍將(8)以外的黑子都可以吃。
+				dest = pMoves[ssrc] & ( black ^ piece[8] );
+			else if(i==3) //相,周圍將、士以外的黑子都可以吃。	
+				dest = pMoves[ssrc] & ( black ^ piece[8] ^ piece[9] );
+			else if(i==4) //?,只能吃車(11)、馬、炮、卒。
+				dest = pMoves[ssrc] & (piece[11] | piece[12] | piece[13] | piece[14] );	
+			else if(i==5) //傌,只能吃馬(12)、炮、卒。
+				dest = pMoves[ssrc] & (piece[12] | piece[13] | piece[14] );
+			else if(i==6) //炮,特殊處理。
+				;//dest = CGen(ssrc) & black;
+			else if(i==7) //兵,只能吃將(8)、卒(14)。
+				dest = pMoves[ssrc] & (piece[8] | piece[14]);
+			else
+				dest = 0;
+			while(dest){ //如果 dest 有多個位置的話,分開存起來。
+				U32 mask2 = LS1B(dest);
+				dest ^= mask2;
+				U32 result = GetIndex(mask2);
+				allEatMove[AEMindex][0]=ssrc;
+				allEatMove[AEMindex][1]=result;
+				AEMindex++;
+			}
+		}
+	}
+}
+
+int openchess()
+{
+	stringstream ss;
+	int a=rand()%4;//a~d
+	int b=rand()%8;//1~8
+	U32 c=pow(2,a)*pow(16,b);//隨機取位後轉換成bitboard可用的形式 
+	U32 d=c&piece[15];//確認是否未翻
+	while(d==0&&piece[15]!=0)//沒找到未翻棋 且 還有未翻棋 
+	{
+		a=rand()%4;
+		b=rand()%8;
+		c=pow(2,a)*pow(16,b);
+		d=c&piece[15];
+	}
+	string aa;
+	if(a==0) aa="a";
+	else if(a==1) aa="b";
+	else if(a==2) aa="c";
+	else if(a==3) aa="d";
+	ss << b+1;
+	src=aa+ss.str();
+	cout<<aa+ss.str()<<endl;
+	//cout<<hex<<d<<" ";
+}
+
+int readBoard()//讀檔模式 讀取board.txt專用 
+{
+	int cp=0;//current_position計算位址 
+	int line=0;//目前讀到的行數 
+	ifstream file;
+	string str;
+	file.open("board.txt",ios::in);
+	vector<string> aStr;
+	while (getline(file, str))
+	{
+		aStr.push_back(str);
+		//cout<<str<<endl;
+		if(line==2)
+		{
+			for(int i=0;i<=13;i++)
+			{
+				piece_count[i]=str[i*2+2]-'0';//把剩餘棋子讀入piece_count 
+			}
+		}
+		if(line>=3&&line<=10&&initailBoard==1)
+		{
+			for(int i=0;i<=3;i++)
+			{
+				current_position[cp]=str[i*2+2];//讀入初始場上狀況 只讀一次 
+				cp++;
+			}
+			if(line==10)
+				initailBoard=0;
+		}
+		if(line==RMcount&&str[3]=='.')
+		{
+		}
+		line++;
+	}
+	file.close();
+}
+
+int createMovetxt()//背景模式 
+{
+	fstream file;
+	file.open("move.txt",ios::out);
+	if(dst=="0")
+		file<<"1"<<endl;
+	else
+		file<<"0"<<endl;
+	file<<src<<endl<<dst<<endl;
+}
+
+int initial()
+{
+	for(int i=0;i<=14;i++)
+		piece[i]=0;
+	occupied=0xFFFFFFFF;
+	piece[15]=0xFFFFFFFF;
+}
