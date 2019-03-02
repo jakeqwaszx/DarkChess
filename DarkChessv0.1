@@ -109,37 +109,35 @@ int chess()
 			}
 		}
 	}
-	for(int i=1; i<8; i++){ //1~7 為帥~兵,src 為棋子起點,dest 為終點。
+	AOMindex=0;
+	for(int i=1; i<8; i++){ //紅方純移動
 		U32 p = piece[i]; //取得棋子位置
 		while(p){ //將紅色 1~7 號的子都搜尋一遍
 			U32 mask = LS1B(p); //如果該棋子在多個位置,先取低位元的位置。
 			p ^= mask; //除去位於最低位元的該兵種
 			ssrc = GetIndex(mask); //將最低位元的兵種設為走步起點
-			if(i==1) //帥,周圍卒(14)以外的黑子都可以吃。
-				dest = pMoves[ssrc] & ( black ^ piece[14] );
-			else if(i==2) //仕,周圍將(8)以外的黑子都可以吃。
-				dest = pMoves[ssrc] & ( black ^ piece[8] );
-			else if(i==3) //相,周圍將、士以外的黑子都可以吃。	
-				dest = pMoves[ssrc] & ( black ^ piece[8] ^ piece[9] );
-			else if(i==4) //?,只能吃車(11)、馬、炮、卒。
-				dest = pMoves[ssrc] & (piece[11] | piece[12] | piece[13] | piece[14] );	
-			else if(i==5) //傌,只能吃馬(12)、炮、卒。
-				dest = pMoves[ssrc] & (piece[12] | piece[13] | piece[14] );
-			else if(i==6) //炮,特殊處理。
-				;//dest = CGen(ssrc) & black;
-			else if(i==7) //兵,只能吃將(8)、卒(14)。
-				dest = pMoves[ssrc] & (piece[8] | piece[14]);
-			else
-				dest = 0;
+			dest = pMoves[ssrc] & piece[0];//只走空格
 			while(dest){ //如果 dest 有多個位置的話,分開存起來。
 				U32 mask2 = LS1B(dest);
 				dest ^= mask2;
 				U32 result = GetIndex(mask2);
-				allEatMove[AEMindex][0]=ssrc;
-				allEatMove[AEMindex][1]=result;
-				AEMindex++;
+				allOnlyMove[AOMindex][0]=ssrc;
+				allOnlyMove[AOMindex][1]=result;
+				AOMindex++;
 			}
 		}
+	}
+	if(AEMindex!=0)//能吃先吃 隨機
+	{
+		int a=rand()%AEMindex;
+		allEatMove[AEMindex][0]=src;
+		allEatMove[AEMindex][1]=dst;
+	}
+	else
+	{
+		int a=rand()%AOMindex;
+		allOnlyMove[AOMindex][0]=src;
+		allOnlyMove[AOMindex][1]=dst;
 	}
 }
 
