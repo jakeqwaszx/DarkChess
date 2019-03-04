@@ -14,8 +14,8 @@ int openchess();//翻棋
 int chess();//移動 
 int ai();//決定行動 
 int readBoard();//讀檔模式 讀取board.txt 把讀入檔案轉成bitboard 還沒倒著存入 
-int createMovetxt();//創造move.txt 0走步 1翻棋 
-int createMove();
+int createMovetxt();//創造move.txt 0走步 1翻棋
+int IndexToBoard(int indexa,int indexb);//把src dst從編號0~31->棋盤編號a1~d4 
 using namespace std;
 
 typedef unsigned int U32;
@@ -47,7 +47,8 @@ int AEMindex=0;//alleatmove index
 U32 allOnlyMove[10000][2];//存可移動非吃子的方法 0 src 1 dst
 int AOMindex=0;//allonlymove index
 bool mycolor;//0 red 1 black
-string src,dst;
+string src,dst;//棋盤編號版 a1~d4
+int srci,dsti;//index版 0~31
 
 int main()
 {
@@ -55,6 +56,7 @@ int main()
 	initial();//初始化 
 	readBoard();
 	int end=1;//結束則=0
+	IndexToBoard(0,31);
 	while(end)
 	{
 		dst="0";
@@ -130,14 +132,14 @@ int chess()
 	if(AEMindex!=0)//能吃先吃 隨機
 	{
 		int a=rand()%AEMindex;
-		allEatMove[AEMindex][0]=src;
-		allEatMove[AEMindex][1]=dst;
+		srci=allEatMove[a][0];
+		dsti=allEatMove[a][1];
 	}
 	else
 	{
 		int a=rand()%AOMindex;
-		allOnlyMove[AOMindex][0]=src;
-		allOnlyMove[AOMindex][1]=dst;
+		srci=allOnlyMove[a][0];
+		dsti=allOnlyMove[a][1];
 	}
 }
 
@@ -220,4 +222,28 @@ int initial()
 		piece[i]=0;
 	occupied=0xFFFFFFFF;
 	piece[15]=0xFFFFFFFF;
+}
+
+int IndexToBoard(int indexa,int indexb){
+	stringstream ss;
+	string aa;
+	int a=indexa/4;//0~7
+	int b=indexa%4;//0~3 a~d
+	if(b==0) aa="d";
+	else if(b==1) aa="c";
+	else if(b==2) aa="b";
+	else if(b==3) aa="a";
+	ss << 8-a;
+	src=aa+ss.str();
+	cout<<"src : "<<src<<endl;
+	stringstream sss;
+	a=indexb/4;//0~7
+	b=indexb%4;//0~3 a~d
+	if(b==0) aa="d";
+	else if(b==1) aa="c";
+	else if(b==2) aa="b";
+	else if(b==3) aa="a";
+	sss << 8-a;
+	dst=aa+sss.str();
+	cout<<"dst : "<<dst<<endl;
 }
