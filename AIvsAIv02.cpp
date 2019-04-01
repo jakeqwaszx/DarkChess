@@ -43,7 +43,7 @@ ofstream foutrc(winrecord, ios::ate);
 ofstream foutrcm(winrecordmove, ios::ate);
 vector<string> recordmove;// use to record all move in one game
 //*******************************//
-
+ 
 void init() {
 	for (int i = 0; i < 8; i++) {// initboard[4][8]
 		for (int j = 0; j < 4; j++) {
