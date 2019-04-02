@@ -117,6 +117,8 @@ int main()
 
 void ai2()
 {
+	open=0xffffffff;
+	ch=0x00000000;
 	open^=piece[15];//非未翻棋
 	while(open)
 	{
