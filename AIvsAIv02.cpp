@@ -432,8 +432,9 @@ bool docreate() {
 			}
 		}
 		foute << board[i] << "\n";
-
+		
 	}
+	foute.close();
 	return false;
 }
 
@@ -598,6 +599,7 @@ bool doenter() {
 		foute << board[i] << "\n";
 
 	}
+	foute.close();
 	return false;
 }
 
