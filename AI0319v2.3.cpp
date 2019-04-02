@@ -1176,6 +1176,7 @@ void createMovetxt()//背景模式
 	else
 		file<<src<<endl<<dst<<endl;
 	cout<<srci<<"."<<src<<":src "<<dsti<<"."<<dst<<":dst "<<endl;
+	file.close();
 }
 
 void initial()
