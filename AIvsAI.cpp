@@ -23,6 +23,10 @@ char showboard[4][8];
 int color = -1;// 0:create is b,enter is R; 1:create is R,enter is b
 int firstflip = 0;// 1 first time flip(use to determine color);
 int err = 0;
+int totalturn;
+double timeout[2];//0:create's time; 1:enter's time
+vector<double> createtime;
+vector<double> entertime;
 
 //this are for creatroom
 //*******************************//
@@ -30,7 +34,7 @@ int win = 0;
 int lose = 0;
 int draw = 0;
 //*******************************//
-int totalturn;
+
 //record win,lose in realtime.txt ex."2019 3 31 14 31 50.txt"
 //record move in realtimemove.txt ex."2019 3 31 14 31 50 move.txt"
 //*******************************//
@@ -53,6 +57,9 @@ void init() {
 				,'k','g','g','m','m','r','r','n','n','c','c','p','p' ,'p' ,'p' ,'p' };
 	firstflip = 1;
 	color = -1;
+	for (int i = 0; i < 2; i++) {
+		timeout[i] = 0;
+	}
 	ofstream foutc("CreateRoom\\Search\\board.txt", ios::out);
 	ofstream foute("EnterRoom\\Search\\board.txt", ios::out);
 	recordmove.clear();
@@ -75,68 +82,76 @@ void printwinrecord() {
 	for (int i = 0; i < recordmove.size(); i++) {
 		foutrcm << recordmove[i] << endl;
 	}
+	for (int i = 0; i < recordmove.size(); i+=2) {
+		if (i < createtime.size())
+			foutrcm << i << " ." << createtime[i] << endl;
+		if(i<entertime.size())
+			foutrcm << i+1 << " ." << entertime[i] << endl;
+	}
+	foutrcm << "createroom total time use: " << timeout[0] << endl;
+	foutrcm << "enterroom total time use: " << timeout[1] << endl;
 	foutrc.close();
 	foutrcm.close();
 }
 
-void translate(char a) { //k to ±N
+void translate(char a) { //k to å°‡
 	if (a - 96 > 0) {
 		set_console_color(10);
 	}
 	if (a - 64 > 0 && a - 88 < 0) {
 		set_console_color(12);
 	}
-	if (a == 'k') {//±N
-		printf("\t±N");
+	if (a == 'k') {//å°‡
+		printf("\tå°‡");
 	}
-	else if (a == 'g') {//¤h
-		printf("\t¤h");
+	else if (a == 'g') {//å£«
+		printf("\tå£«");
 	}
-	else if (a == 'm') {//¶H
-		printf("\t¶H");
+	else if (a == 'm') {//è±¡
+		printf("\tè±¡");
 	}
-	else if (a == 'r') {//¨®
-		printf("\t¨®");
+	else if (a == 'r') {//è»Š
+		printf("\tè»Š");
 
 	}
-	else if (a == 'n') {//°¨
-		printf("\t°¨");
+	else if (a == 'n') {//é¦¬
+		printf("\té¦¬");
 
 	}
-	else if (a == 'c') {//¯¥
-		printf("\t¯¥");
+	else if (a == 'c') {//ç ²
+		printf("\tç ²");
 
 	}
-	else if (a == 'p') {//¨ò
-		printf("\t¨ò");
+	else if (a == 'p') {//å’
+		printf("\tå’");
 
 	}
-	else if (a == 'K') {//«Ó
-		printf("\t«Ó");
+	else if (a == 'K') {//å¸¥
+		printf("\tå¸¥");
 
 	}
-	else if (a == 'G') {//¥K
-		printf("\t¥K");
+	else if (a == 'G') {//ä»•
+		printf("\tä»•");
 
 	}
-	else if (a == 'M') {//¬Û
-		printf("\t¬Û");
+	else if (a == 'M') {//ç›¸
+		printf("\tç›¸");
 
 	}
-	else if (a == 'R') {//¨®
-		printf("\t¨®");
+	else if (a == 'R') {//è»Š
+		printf("\tè»Š");
 
 	}
-	else if (a == 'N') {//ØX
-		printf("\tØX");
+	else if (a == 'N') {//å‚Œ
+		printf("\tå‚Œ");
 
 	}
-	else if (a == 'C') {//¬¶
-		printf("\t¬¶");
+	else if (a == 'C') {//ç‚®
+		printf("\tç‚®");
 
 	}
-	else if (a == 'P') {//§L
-		printf("\t§L");
+	else if (a == 'P') {//å…µ
+		printf("\tå…µ");
 
 	}
 	else if (a == 'X') {
@@ -210,7 +225,6 @@ bool check() {
 			cout << "creatroom win!" << endl;
 			win++;
 		}
-		printwinrecord();
 		return true;
 	}
 	else if (b == 0) {
@@ -222,7 +236,6 @@ bool check() {
 			cout << "enterroom win!" << endl;
 			lose++;
 		}
-		printwinrecord();
 		return true;
 	}
 	else {
@@ -234,31 +247,31 @@ bool eat(char a, char b) { //a eat b
 	if (a - 97 < 0)a = a + 32;
 	if (b - 97 < 0)b = b + 32;
 
-	if (a == 'k') {//±N
+	if (a == 'k') {//å°‡
 		if (b == 'p') {
 			return false;
 		}
 		else return true;
 	}
-	else if (a == 'g') {//¤h
+	else if (a == 'g') {//å£«
 		if (b == 'k') {
 			return false;
 		}
 		else return true;
 	}
-	else if (a == 'm') {//¶H
+	else if (a == 'm') {//è±¡
 		if (b == 'k' || b == 'g') {
 			return false;
 		}
 		else return true;
 	}
-	else if (a == 'r') {//¨®
+	else if (a == 'r') {//è»Š
 		if (b == 'k' || b == 'g' || b == 'm') {
 			return false;
 		}
 		else return true;
 	}
-	else if (a == 'n') {//°¨
+	else if (a == 'n') {//é¦¬
 		if (b == 'c' || b == 'p') {
 			return true;
 		}
@@ -277,13 +290,41 @@ bool eat(char a, char b) { //a eat b
 		return false;
 }
 
+bool checktimeout(double start, double end, int whostime) {
+	double timeuse = (end - start) / CLOCKS_PER_SEC;
+	cout << "use:" << timeuse << " seconds\n";
+	if (whostime) {
+		timeout[whostime] += timeuse;
+		entertime.push_back(timeuse);
+		if (timeout[whostime] >=900) {
+			cout << "enterroom timeout\n";
+			win++;
+			return true;
+		}
+	}
+	else {
+		timeout[whostime] += timeuse;
+		createtime.push_back(timeuse);
+		if (timeout[whostime] >=900) {
+			cout << "createroom timeout\n";
+			lose++;
+			return true;
+		}
+	}
+	return false;
+}
+
 bool docreate() {
 	vector<string> board;
 	string str;
 	vector<string> move;// move in move.txt
 	vector<string> readmove;// move in board.txt
-	system("cd CreateRoom\\Search && search.exe");// excute creatroom's search.exe
 
+	double START, END;
+	START = clock();
+	system("cd CreateRoom\\Search && search.exe");// excute creatroom's search.exe
+	END = clock();
+	if (checktimeout(START, END, 0)) { return true; }
 	ifstream finc("CreateRoom\\Search\\board.txt", ios::in);
 	int startmove = 0;
 	while (getline(finc, str)) {// read creatroom's board.txt
@@ -314,7 +355,7 @@ bool docreate() {
 						lose++;
 						cout << "creat made wrong flip!" << endl;
 						recordmove.push_back("creat made wrong flip!");
-						printwinrecord();
+						
 						return true;
 					}
 					showboard[temp.at(0) - 'a'][temp.at(1) - '1'] = temp.at(3);
@@ -328,7 +369,7 @@ bool docreate() {
 						lose++;
 						cout << "creat made wrong move(take blank)!" << endl;
 						recordmove.push_back("creat made wrong move(take blank)!");
-						printwinrecord();
+						
 						return true;
 					}
 					if (!eat(showboard[move[1].at(0) - 'a'][move[1].at(1) - '1'], showboard[move[2].at(0) - 'a'][move[2].at(1) - '1']) &&
@@ -336,7 +377,7 @@ bool docreate() {
 						lose++;
 						cout << "creat made wrong move(cant eat)!" << endl;
 						recordmove.push_back("creat made wrong move(cant eat)!");
-						printwinrecord();
+						
 						return true;
 					}
 					if (color) {
@@ -344,7 +385,7 @@ bool docreate() {
 							lose++;
 							cout << "creat made wrong move(red but take black)!" << endl;
 							recordmove.push_back("creat made wrong move(red but take black)!");
-							printwinrecord();
+							
 							return true;
 						}
 					}
@@ -353,7 +394,7 @@ bool docreate() {
 							lose++;
 							cout << "creat made wrong move(black but take red)!" << endl;
 							recordmove.push_back("creat made wrong move(black but take red)!");
-							printwinrecord();
+							
 							return true;
 						}
 					}
@@ -376,7 +417,7 @@ bool docreate() {
 						lose++;
 						cout << "creat made wrong flip!" << endl;
 						recordmove.push_back("creat made wrong flip!");
-						printwinrecord();
+						
 						return true;
 					}
 					showboard[temp.at(0) - 'a'][temp.at(1) - '1'] = temp.at(3);
@@ -401,7 +442,7 @@ bool docreate() {
 						lose++;
 						cout << "creat made wrong move(take blank)!" << endl;
 						recordmove.push_back("creat made wrong move(take blank)!");
-						printwinrecord();
+						
 						return true;
 					}
 					if (!eat(showboard[move[1].at(0) - 'a'][move[1].at(1) - '1'], showboard[move[2].at(0) - 'a'][move[2].at(1) - '1']) &&
@@ -409,7 +450,7 @@ bool docreate() {
 						lose++;
 						cout << "creat made wrong move(cant eat)!" << endl;
 						recordmove.push_back("creat made wrong move(cant eat)!");
-						printwinrecord();
+						
 						return true;
 					}
 					if (color) {
@@ -417,7 +458,7 @@ bool docreate() {
 							lose++;
 							cout << "creat made wrong move(red but take black)!" << endl;
 							recordmove.push_back("creat made wrong move(red but take black)!");
-							printwinrecord();
+							
 							return true;
 						}
 					}
@@ -426,7 +467,7 @@ bool docreate() {
 							lose++;
 							cout << "creat made wrong move(black but take red)!" << endl;
 							recordmove.push_back("creat made wrong move(black but take red)!");
-							printwinrecord();
+							
 							return true;
 						}
 					}
@@ -449,7 +490,11 @@ bool doenter() {
 	vector<string> move;// move in move.txt
 	vector<string> readmove;// move in board.txt
 
+	double START, END;
+	START = clock();
 	system("cd EnterRoom\\Search && search.exe");// excute enterroom's search.exe
+	END = clock();
+	if (checktimeout(START, END, 1)) { return true; }
 
 	ifstream finc("EnterRoom\\Search\\board.txt", ios::in);
 	int startmove = 0;
@@ -481,7 +526,7 @@ bool doenter() {
 						win++;
 						cout << "enter made wrong flip!" << endl;
 						recordmove.push_back("enter made wrong flip!");
-						printwinrecord();
+						
 						return true;
 					}
 					showboard[temp.at(0) - 'a'][temp.at(1) - '1'] = temp.at(3);
@@ -495,7 +540,7 @@ bool doenter() {
 						win++;
 						cout << "enter made wrong move(take blank)!" << endl;
 						recordmove.push_back("enter made wrong move(take blank)!");
-						printwinrecord();
+						
 						return true;
 					}
 					if (!eat(showboard[move[1].at(0) - 'a'][move[1].at(1) - '1'], showboard[move[2].at(0) - 'a'][move[2].at(1) - '1']) &&
@@ -503,7 +548,7 @@ bool doenter() {
 						win++;
 						cout << "enter made wrong move(cant eat)!" << endl;
 						recordmove.push_back("enter made wrong move(cant eat)!");
-						printwinrecord();
+						
 						return true;
 					}
 					if (!color) {
@@ -511,7 +556,7 @@ bool doenter() {
 							win++;
 							cout << "enter made wrong move(black but take red)!" << endl;
 							recordmove.push_back("enter made wrong move(black but take red)!");
-							printwinrecord();
+							
 							return true;
 						}
 					}
@@ -520,7 +565,7 @@ bool doenter() {
 							win++;
 							cout << "enter made wrong move(red but take black)!" << endl;
 							recordmove.push_back("enter made wrong move(red but take black)!");
-							printwinrecord();
+							
 							return true;
 						}
 					}
@@ -543,7 +588,7 @@ bool doenter() {
 						win++;
 						cout << "enter made wrong flip!" << endl;
 						recordmove.push_back("enter made wrong flip!");
-						printwinrecord();
+						
 						return true;
 					}
 					showboard[temp.at(0) - 'a'][temp.at(1) - '1'] = temp.at(3);
@@ -568,7 +613,7 @@ bool doenter() {
 						win++;
 						cout << "enter made wrong move(take blank)!" << endl;
 						recordmove.push_back("enter made wrong move(take blank)!");
-						printwinrecord();
+						
 						return true;
 					}
 					if (!eat(showboard[move[1].at(0) - 'a'][move[1].at(1) - '1'], showboard[move[2].at(0) - 'a'][move[2].at(1) - '1']) &&
@@ -576,7 +621,7 @@ bool doenter() {
 						win++;
 						cout << "enter made wrong move(cant eat)!" << endl;
 						recordmove.push_back("enter made wrong move(cant eat)!");
-						printwinrecord();
+						
 						return true;
 					}
 					if (!color) {
@@ -584,7 +629,7 @@ bool doenter() {
 							win++;
 							cout << "enter made wrong move!" << endl;
 							recordmove.push_back("enter made wrong move!");
-							printwinrecord();
+							
 							return true;
 						}
 					}
@@ -593,7 +638,7 @@ bool doenter() {
 							win++;
 							cout << "enter made wrong move!" << endl;
 							recordmove.push_back("enter made wrong move!");
-							printwinrecord();
+							
 							return true;
 						}
 					}
@@ -652,24 +697,24 @@ int main() {
 		while (1) {
 			if (!first) {// first:creatroom , second:enterroom
 				cout << "creat step: " << step << endl;
-				if (docreate()) { err++; break; }
-				if (check()) { err++; break; }
+				if (docreate()) { err++; printwinrecord(); break; }
+				if (check()) { printwinrecord(); break; }
 				//system("pause");
 				cout << "enter step: " << step << endl;
-				if (doenter()) { err++;  break; }
-				if (check()) { break; }
+				if (doenter()) { err++;  printwinrecord(); break; }
+				if (check()) { printwinrecord(); break; }
 				if (repetition()) { printwinrecord(); break; }
 				//system("pause");
 
 			}
 			else {// first:enterroom , second:creatroom
 				cout << "enter step: " << step << endl;
-				if (doenter()) { err++;  break; }
-				if (check()) { break; }
+				if (doenter()) { err++;  printwinrecord(); break; }
+				if (check()) { printwinrecord(); break; }
 				//system("pause");
 				cout << "creat step: " << step << endl;
-				if (docreate()) { err++;  break; }
-				if (check()) { break; }
+				if (docreate()) { err++;  printwinrecord(); break; }
+				if (check()) { printwinrecord(); break; }
 				if (repetition()) { printwinrecord(); break; }
 				//system("pause");
 			}
@@ -680,7 +725,7 @@ int main() {
 		//system("pause");
 	}
 	cout << "err: " << err << endl;
-	//system("pause");
+	system("pause");
 	return 0;
 }
 
