@@ -102,12 +102,18 @@ int main()
 	int onboardi=0;//計算場面上未翻棋數量 
 	for(int i=0;i<32;i++)
 	{
-		if(onboard%2==1) onboardi++;
-		if(onboard/2>0) onboard/=2;
+		int a=onboard%2;
+		int b=onboard/2;
+		if(a==1) 
+		{
+			onboardi++;
+		}
+		if(b>0) onboard/=2;
+		if(b==1) break;
 	}
-	if(onboardi<2)maxDepth=10;
-	else if(onboardi<4)maxDepth=8;
-	else if(onboardi<8)maxDepth=6;
+	if(onboardi<2)maxDepth=8;
+	else if(onboardi<4)maxDepth=7;
+	else if(onboardi<7)maxDepth=6;
 	else if(onboardi<14)maxDepth=5;
 	//cout<<hex<<piece[0]<<" "<<piece[1]<<" "<<piece[8]<<" "<<piece[15]<<" "<<red<<" "<<black<<" "<<occupied<<" "<<piece_count[7]<<endl;
 	//SimMove(0,1,piece,&red,&black,&occupied,piece_count);
