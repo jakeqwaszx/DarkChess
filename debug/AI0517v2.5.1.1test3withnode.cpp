@@ -149,6 +149,7 @@ int main()
 	else if(onboardi<4)maxDepth=7;
 	else if(onboardi<7)maxDepth=6;
 	else if(onboardi<14)maxDepth=5;
+	nodes.resize(maxDepth + 1);
 	//cout<<hex<<piece[0]<<" "<<piece[1]<<" "<<piece[8]<<" "<<piece[15]<<" "<<red<<" "<<black<<" "<<occupied<<" "<<piece_count[7]<<endl;
 	//SimMove(0,1,piece,&red,&black,&occupied,piece_count);
 	//cout<<hex<<piece[0]<<" "<<piece[1]<<" "<<piece[8]<<" "<<piece[15]<<" "<<red<<" "<<black<<" "<<occupied<<" "<<piece_count[7]<<endl;
@@ -609,7 +610,6 @@ int search(int depth,U32 curPiece[16],U32 curRed,U32 curBlack,U32 curOccupied,in
 		currentParent = NULL;
 	}
 	curNode->parent = currentParent;
-
 	curRed=curPiece[1]|curPiece[2]|curPiece[3]|curPiece[4]|curPiece[5]|curPiece[6]|curPiece[7];
 	curBlack=curPiece[8]|curPiece[9]|curPiece[10]|curPiece[11]|curPiece[12]|curPiece[13]|curPiece[14];
 
@@ -1531,7 +1531,6 @@ void initial()
 	black=0;
 	occupied=0xFFFFFFFF;
 	piece[15]=0xFFFFFFFF;
-	nodes.resize(maxDepth + 1);
 }
 
 void IndexToBoard(int indexa,int indexb)
