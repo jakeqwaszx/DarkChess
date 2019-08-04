@@ -795,12 +795,14 @@ int search(int depth, U32 curPiece[16], U32 curRed, U32 curBlack, U32 curOccupie
 					if (depth % 2 == 1)
 					{
 						curNode->count = beta;
+						curNode->realcount = beta;
 						currentChild = curNode;
 						return beta;
 					}
 					else
 					{
 						curNode->count = alpha;
+						curNode->realcount = alpha;
 						currentChild = curNode;
 						return alpha;
 					}
@@ -1806,9 +1808,8 @@ void printDebug()
 			if (nodes[depth][i]->move[0] == nodes[depth][i]->move[1])
 			{
 				translate(nodes[depth][i]->chessmove[0]);
-			}		
-				cout << s << " " << index(nodes[depth][i]->move[0]) << " " << index(nodes[depth][i]->move[1]) << " " << nodes[depth][i]->realcount << endl;
-			
+			}
+			cout << s << " " << index(nodes[depth][i]->move[0]) << " " << index(nodes[depth][i]->move[1]) << " " << nodes[depth][i]->realcount << endl;
 		}
 	}
 	while (1)
@@ -1831,8 +1832,7 @@ void printDebug()
 					{
 						translate(nodes[depth][i]->chessmove[0]);
 					}
-						cout << s << " " << index(nodes[depth][i]->move[0]) << " " << index(nodes[depth][i]->move[1]) << " " << nodes[depth][i]->realcount << endl;
-					
+					cout << s << " " << index(nodes[depth][i]->move[0]) << " " << index(nodes[depth][i]->move[1]) << " " << nodes[depth][i]->realcount << endl;
 				}
 			}
 		}
@@ -1860,8 +1860,7 @@ void printDebug()
 					{
 						translate(nodes[depth][i]->chessmove[0]);
 					}
-						cout << s << " " << index(nodes[depth][i]->move[0]) << " " << index(nodes[depth][i]->move[1]) << " " << nodes[depth][i]->realcount << endl;
-					
+					cout << s << " " << index(nodes[depth][i]->move[0]) << " " << index(nodes[depth][i]->move[1]) << " " << nodes[depth][i]->realcount << endl;
 				}
 			}
 		}
@@ -1869,16 +1868,36 @@ void printDebug()
 		{ //err
 			cout << "too depth";
 		}
-		int high=0;
-		for(int i=0;i<select.size();i++){
-			if(select[i]->realcount>high)
-			high=select[i]->realcount;
+		int high = -100000;
+		int low = 100000;
+		if (depth % 2 == 1)
+		{
+			for (int i = 0; i < select.size(); i++)
+			{
+				if (select[i]->count > high)
+					high = select[i]->count;
+			}
+			for (int i = 0; i < select.size(); i++)
+			{
+				if (select[i]->count == high)
+					cout << "No. " << i << " is highest." << endl;
+			}
 		}
-		for(int i=0;i<select.size();i++){
-			if(select[i]->realcount==high)
-			cout<<"No. "<<i<<" is highest."<<endl;
+		else
+		{
+			for (int i = 0; i < select.size(); i++)
+			{
+				if (select[i]->count < low)
+					low = select[i]->count;
+			}
+			for (int i = 0; i < select.size(); i++)
+			{
+				if (select[i]->count == low)
+					cout << "No. " << i << " is lowest." << endl;
+			}
 		}
-		high=0;
+		high = -100000;
+		low = 100000;
 		select.clear();
 		s = -1;
 	}
@@ -1962,7 +1981,8 @@ void set_console_color(unsigned short color_index) // control collor
 	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), color_index);
 }
 
-string index(int indexa){
+string index(int indexa)
+{
 	stringstream ss;
 	string aa;
 	int a = indexa / 4; //0~7
