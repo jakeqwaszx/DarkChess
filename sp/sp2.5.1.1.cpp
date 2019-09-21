@@ -83,7 +83,7 @@ int srci, dsti;//index版 0~31
 int maxDepth = 7;
 U32 open = 0xffffffff;//非未翻棋
 U32 ch;//需要search的位置 
-int noReDepth = 1;
+int noReDepth = 2;
 
 int main()
 {
@@ -442,70 +442,29 @@ int countAva(int pie[14], int deep, U32 curPiece[16])//將士相車馬炮兵
 {
 	int eat[10];
 	int biggest = 0;
+
 	if (deep != maxDepth) biggest = 0;
 	int power = 0;
-	int redleft = 0;
-	int blackleft = 0;
 	if (color == 0)//紅 
 	{
 		for (int i = 0; i < 7; i++)
-		{
 			power += pie[i] * piPw[i];
-			redleft += pie[i];
-		}
 		for (int i = 7; i < 14; i++)
-		{
 			power -= pie[i] * piPw[i];
-			blackleft += pie[i];
-		}
-		if (redleft == 0) power = -100000 + deep * 10000;
-		if (blackleft == 0) power = 100000 - deep * 10000;
 	}
 	else
 	{
 		for (int i = 7; i < 14; i++)
-		{
 			power += pie[i] * piPw[i];
-			blackleft += pie[i];
-		}
 		for (int i = 0; i < 7; i++)
-		{
 			power -= pie[i] * piPw[i];
-			redleft += pie[i];
-		}
-		if (blackleft == 0) power = -100000 + deep * 10000;
-		if (redleft == 0) power = 100000 - deep * 10000;
 	}
+
 	int movePoint = 0;
-	//-----------------------------------------------------找誰被吃的函數 
-	//int check=0;//如果沒找到誰被吃 
-	//int PointMayEat=0;//找到即將吃誰的最大子 
-	//for(int i=0; i<AEMindex ;i++)//i所有被吃子 
-	//{
-		//for(int ii=1; ii<15; ii++)//ii找那個位置為哪個子
-		//{
-			//U32 eaten=1<<allEatMove[i][1];//allEatMove[i][1]馬上可能被吃的子的位置 
-			//if((curPiece[ii]&eaten)!=0)
-			//{
-				//if(piPw[ii]>PointMayEat)
-					//PointMayEat=piPw[ii];//找最大被吃子分數 
-				//check=1;
-			//}
-		//} 
-		//if(check==0)
-		//{
-			//cout<<"err1 ";
-		//}
-	//}
-	//-----------------------------------------------------
 	if (deep % 2 == 0)
-	{
-		movePoint = AEMindex * 20 + AOMindex - EAEMindex * 50 - EAOMindex;
-	}
+		movePoint = AEMindex * 1 + AOMindex - EAEMindex * 1 - EAOMindex;
 	else
-	{
-		movePoint = EAEMindex * 20 + EAOMindex - AEMindex * 50 - AOMindex;
-	}
+		movePoint = EAEMindex * 1 + EAOMindex - AEMindex * 1 - AOMindex;
 	return power + movePoint - deep;
 }
 
@@ -573,6 +532,7 @@ int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int
 			weight[wp][0] = taEM[i][0];
 			weight[wp][1] = taEM[i][1];
 			weight[wp][2] = search(depth + 1, tempPiece, curPie, alpha, beta, flip);
+			if (taEM[i][1] == 13 || taEM[i][1] == 14 || taEM[i][1] == 17 || taEM[i][1] == 18) weight[wp][2]++;//移動到 13 14 17 18時+1; 
 			curPie[c2p - 1]++;
 
 			if (depth % 2 == 0)//max
@@ -644,6 +604,8 @@ int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int
 
 		weight[wp][2] = search(depth + 1, tempPiece, curPie, alpha, beta, flip);
 
+		if (taEM[i][1] == 13 || taEM[i][1] == 14 || taEM[i][1] == 17 || taEM[i][1] == 18) weight[wp][2]++;//移動到 13 14 17 18時+1; 
+
 		if (depth % 2 == 0)//max
 		{
 			if (weight[wp][2] > best)
@@ -681,7 +643,7 @@ int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int
 	if (curPiece[15] != 0)//先試翻棋 做完後call search 
 	{
 		for (int ssrc = 0; ssrc < 32; ssrc++) { //搜尋盤面上 32 個位置
-			if (curPiece[15] & (1 << ssrc) && ch & (1 << ssrc) && depth <= noReDepth) { //若為未翻子 在未翻子的遮罩內 depth<=3 
+			if (curPiece[15] & (1 << ssrc) && ch & (1 << ssrc) && depth < noReDepth) { //若為未翻子 在未翻子的遮罩內 depth<=3 
 				if (depth == 0)
 				{
 					int r = rand() % 6;;
