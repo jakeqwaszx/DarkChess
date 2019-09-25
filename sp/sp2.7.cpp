@@ -91,6 +91,7 @@ int noReDepth = 2;
 int randtable[15][32];
 struct hashdata { int count; int depth; U32 curPiece[16]; };
 vector<hashdata > hashtable;
+int test = 0;
 int testa = 0;
 int testb = 0;
 
@@ -118,11 +119,11 @@ int main()
 		if (b == 1) break;
 	}
 	//move
-	if (onboardi =0)maxDepth = 11;
-	else if (onboardi < 30) maxDepth = 6;
+	if (onboardi =0)maxDepth = 15;
+	else if (onboardi < 27) maxDepth = 6;
 	//
 	//flip
-	if (onboardi < 30)noReDepth = 1;
+	if (onboardi < 27)noReDepth = 1;
 	//
 	dst = "0";
 	ai2();//決定行動 
@@ -132,6 +133,7 @@ int main()
 	if (color == 0) cout << "紅 " << endl;
 	else cout << "黑 " << endl;
 	createMovetxt();
+	cout << test << endl;
 	cout << testa << endl;
 	cout << testb << endl;
 
@@ -536,8 +538,9 @@ int countAva(int pie[14], int deep, U32 curPiece[16])//將士相車馬炮兵
 
 int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int flip)
 {
+	test++;
 	int hashvalue = myhash(curPiece);
-	if (hashtable[hashvalue % hashtable.size()].count != 0 && hashtable[hashvalue % hashtable.size()].depth > depth && hashtable[hashvalue % hashtable.size()].depth%2 == depth%2) {
+	if (hashtable[hashvalue % hashtable.size()].count != 0 && hashtable[hashvalue % hashtable.size()].depth >= depth && hashtable[hashvalue % hashtable.size()].depth%2 == depth%2) {
 		int temp = 0;
 		testa++;
 		for (int i = 0; i < 16; i++) {
@@ -1131,7 +1134,7 @@ void initial()
 	hashdata init;
 	init.count = 0;
 	init.depth = 0;
-	for (int i = 0; i < 65536; i++) {
+	for (U32 i = 0; i < 8388607; i++) {
 		hashtable.push_back(init);
 	}
 	red = 0;
