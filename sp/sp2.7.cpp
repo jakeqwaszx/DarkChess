@@ -11,7 +11,7 @@
 
 typedef unsigned int U32;
 using namespace std;
-
+//同型表
 U32 LS1B(U32 x) { return x & (-x); }//取得x的最低位元
 U32 MS1B(U32 x) { // Most Significant 1 Bit (LS1B)函式
 	x |= x >> 32; x |= x >> 16; x |= x >> 8;
@@ -31,7 +31,7 @@ void readBoard();//讀檔模式 讀取board.txt 把讀入檔案轉成bitboard 還沒倒著存入
 void createMovetxt();//創造move.txt 0走步 1翻棋 
 void IndexToBoard(int indexa, int indexb);//把src dst從編號0~31->棋盤編號a1~d4 
 int countAva(int pie[14], int deep, U32 curPiece[16]);//呼叫則傳回當前棋版
-int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int flip);//搜尋最佳走步 
+int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int flip, U32 hashvalue);//搜尋最佳走步 
 void dynamicPower();//計算動態棋力 
 void drawOrNot();//由past_walk判斷是否平手 之後結果輸出給draw 
 int findPiece(int place, U32 curPiece[16]);//傳編號 回傳在這個編號的棋子 
@@ -57,7 +57,7 @@ U32 pMoves3[32] = {
 0x36310000,0x7D720000,0xEBE40000,0xC6C80000,0x63100000,0xD7200000,0xBE400000,0x6C800000 };//翻棋遮罩
 U32 file[4] = { 0x11111111,0x22222222,0x44444444,0x88888888 };//行遮罩 
 U32 row[8] = { 0x0000000F,0x000000F0,0x00000F00,0x0000F000,0x000F0000,0x00F00000,0x0F000000,0xF0000000 };//列遮罩 
-U32 piece[16]; //0空格- 帥k 士g 相m 車r 馬n 炮c 兵p *2 15未翻x 
+U32 piece[16]; //0空格- 帥k 士g 相m 車r 馬n 炮c 兵p *2(先紅) 15未翻x 
 U32 red, black, occupied;//紅 黑 有棋子 
 
 string move = "a1-a1";//下一步行動 用於背景 
@@ -84,16 +84,15 @@ int EAOMindex = 0;//Eallonlymove index
 int color;//0 red 1 black
 string src, dst;//棋盤編號版 a1~d4
 int srci, dsti;//index版 0~31
-int maxDepth = 4;
+int maxDepth = 7;
 U32 open = 0xffffffff;//非未翻棋
 U32 ch;//需要search的位置 
-int noReDepth = 2;
-int randtable[15][32];
-struct hashdata { int count; int depth; U32 curPiece[16]; };
+int noReDepth = 1;
+U32 randtable[15][32];
+struct hashdata {
+	int count; int depth; U32 curPiece[16];
+};
 vector<hashdata > hashtable;
-int test = 0;
-int testa = 0;
-int testb = 0;
 
 int main()
 {
@@ -104,27 +103,13 @@ int main()
 	readBoard();
 	drawOrNot();
 	dynamicPower();
-	U32 onboard = piece[15];
-	int a = onboard / 2;
 	int onboardi = 0;//計算場面上未翻棋數量 
-	for (int i = 0; i < 32; i++)
+	for (int i = 0; i < 14; i++)
 	{
-		int a = onboard % 2;
-		int b = onboard / 2;
-		if (a == 1)
-		{
-			onboardi++;
-		}
-		if (b > 0) onboard /= 2;
-		if (b == 1) break;
+		onboardi += DCount[i];
 	}
-	//move
-	if (onboardi =0)maxDepth = 15;
-	else if (onboardi < 27) maxDepth = 6;
-	//
-	//flip
-	if (onboardi < 27)noReDepth = 1;
-	//
+	if (onboardi == 0)maxDepth = 10;
+	else if (onboardi < 27)maxDepth = 5;
 	dst = "0";
 	ai2();//決定行動 
 	stop = clock();
@@ -133,10 +118,6 @@ int main()
 	if (color == 0) cout << "紅 " << endl;
 	else cout << "黑 " << endl;
 	createMovetxt();
-	cout << test << endl;
-	cout << testa << endl;
-	cout << testb << endl;
-
 	//system("pause");
 }
 
@@ -158,7 +139,8 @@ void ai2()
 		return;
 	}
 	chess(piece, 0);
-	search(0, piece, piece_count, -999999, 999999, 0);
+	U32 hashvalue = myhash(piece);
+	search(0, piece, piece_count, -999999, 999999, 0, hashvalue);
 	IndexToBoard(srci, dsti);
 }
 
@@ -536,29 +518,26 @@ int countAva(int pie[14], int deep, U32 curPiece[16])//將士相車馬炮兵
 	return power + movePoint - deep;
 }
 
-int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int flip)
+int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int flip, U32 hashvalue)
 {
-	test++;
-	int hashvalue = myhash(curPiece);
-	if (hashtable[hashvalue % hashtable.size()].count != 0 && hashtable[hashvalue % hashtable.size()].depth >= depth && hashtable[hashvalue % hashtable.size()].depth%2 == depth%2) {
-		int temp = 0;
-		testa++;
-		for (int i = 0; i < 16; i++) {
-			if (curPiece[i] != hashtable[hashvalue % hashtable.size()].curPiece[i]) {
-				temp++;
-				/*cout << "hashvalue "<< hashvalue % hashtable.size() << endl;
-				cout << "hashtable hashvalue " << myhash(hashtable[hashvalue % hashtable.size()].curPiece) % hashtable.size() << endl;
-				cout << "hashtable[hashvalue % hashtable.size()].count " << hashtable[hashvalue % hashtable.size()].count << endl;
-				cout << curPiece[i] << "\t" << hashtable[hashvalue % hashtable.size()].curPiece[i] << endl;
-				system("pause");*/
-				break;
+	if (hashtable[hashvalue % hashtable.size()].count != 0) {
+		if (hashtable[hashvalue % hashtable.size()].depth % 2 == depth % 2) {
+			int temp = 0;
+			for (int i = 0; i < 16; i++) {
+				if (curPiece[i] != hashtable[hashvalue % hashtable.size()].curPiece[i]) {
+					temp++;
+					break;
+				}
+			}
+			if (temp == 0) {
+				if (hashtable[hashvalue % hashtable.size()].depth <= depth) {
+					return hashtable[hashvalue % hashtable.size()].count;
+				}
+				else {
+					alpha = hashtable[hashvalue % hashtable.size()].count;
+				}
 			}
 		}
-		if (temp == 0) {
-			testb++;
-			return hashtable[hashvalue % hashtable.size()].count;
-		}
-
 	}
 	chess(curPiece, depth);
 	U32 taEM[50][2];//存可吃子的方法 0 src 1 dst 避免被往下搜尋時刷掉
@@ -623,9 +602,8 @@ int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int
 
 			weight[wp][0] = taEM[i][0];
 			weight[wp][1] = taEM[i][1];
-			weight[wp][2] = search(depth + 1, tempPiece, curPie, alpha, beta, flip);
+			weight[wp][2] = search(depth + 1, tempPiece, curPie, alpha, beta, flip, hashvalue^ randtable[c1p][GetIndex(c1)]^ randtable[c2p][GetIndex(c2)]^ randtable[c1p][GetIndex(c2)]);
 			curPie[c2p - 1]++;
-
 			if (depth % 2 == 0)//max
 			{
 				if (weight[wp][2] > alpha)
@@ -701,7 +679,7 @@ int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int
 		weight[wp][0] = taOM[i][0];
 		weight[wp][1] = taOM[i][1];
 
-		weight[wp][2] = search(depth + 1, tempPiece, curPie, alpha, beta, flip);
+		weight[wp][2] = search(depth + 1, tempPiece, curPie, alpha, beta, flip, hashvalue ^ randtable[c1p][GetIndex(c1)]  ^ randtable[c1p][GetIndex(c2)]);
 
 		if (depth % 2 == 0)//max
 		{
@@ -772,7 +750,7 @@ int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int
 							//cout<<pID<<" ";
 						weight[wp][0] = ssrc;
 						weight[wp][1] = ssrc;
-						weight[wp][2] += ((DCount[pID] + 1) * search(depth + 1, tempPiece, curPie, alpha, beta, 1));
+						weight[wp][2] += ((DCount[pID] + 1) * search(depth + 1, tempPiece, curPie, alpha, beta, 1, hashvalue ^ randtable[cpID][GetIndex(c)] ^ randtable[15][GetIndex(c)] ));
 						DCount[pID]++;
 						//將模擬翻出的子復原
 					}
@@ -1122,7 +1100,7 @@ void initial()
 {
 	random_device rd;
 	default_random_engine gen = default_random_engine(rd());
-	uniform_int_distribution<int> dis(0, 65536);
+	uniform_int_distribution<U32> dis(0, 8388607);//2^21
 
 	for (int i = 0; i <= 14; i++)
 		piece[i] = 0;
@@ -1131,11 +1109,11 @@ void initial()
 			randtable[i][j] = dis(gen);
 		}
 	}
-	hashdata init;
-	init.count = 0;
-	init.depth = 0;
-	for (U32 i = 0; i < 8388607; i++) {
-		hashtable.push_back(init);
+	hashdata temp;
+	temp.count = 0;
+	temp.depth = 0;
+	for (int i = 0; i < 8388608; i++) {
+		hashtable.push_back(temp);
 	}
 	red = 0;
 	black = 0;
@@ -1170,8 +1148,8 @@ void IndexToBoard(int indexa, int indexb)
 }
 
 int myhash(U32 tpiece[16]) {
-	int hashvalue = 0;
-	for (int i = 1; i < 16; i++) { //1~15 為雙方兵種 0為
+	U32 hashvalue = 0;
+	for (int i = 1; i < 16; i++) { //1~14 為雙方兵種 0空格 15 未翻
 		U32 p = tpiece[i]; //取得棋子位置
 		while (p) { //將1~15 號的子都搜尋一遍
 			U32 mask = LS1B(p); //如果該棋子在多個位置,先取低位元的位置。
