@@ -6,10 +6,13 @@
 #include <time.h>
 #include <string>
 #include <sstream>
+#include <cassert>
+#include <random>
+#include <unordered_map>
 
 typedef unsigned int U32;
 using namespace std;
-//修正空步 比sp2.6強
+//同型表 sp2.7.4的加速 翻棋時呼叫簡化的search(searchnf)
 U32 LS1B(U32 x) { return x & (-x); }//取得x的最低位元
 U32 MS1B(U32 x) { // Most Significant 1 Bit (LS1B)函式
 	x |= x >> 32; x |= x >> 16; x |= x >> 8;
@@ -29,10 +32,12 @@ void readBoard();//讀檔模式 讀取board.txt 把讀入檔案轉成bitboard 還沒倒著存入
 void createMovetxt();//創造move.txt 0走步 1翻棋 
 void IndexToBoard(int indexa, int indexb);//把src dst從編號0~31->棋盤編號a1~d4 
 int countAva(int pie[14], int deep, U32 curPiece[16]);//呼叫則傳回當前棋版
-int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int flip);//搜尋最佳走步 
+int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int flip, U32 hashvalue);//搜尋最佳走步 
+int searchnf(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int flip);
 void dynamicPower();//計算動態棋力 
 void drawOrNot();//由past_walk判斷是否平手 之後結果輸出給draw 
 int findPiece(int place, U32 curPiece[16]);//傳編號 回傳在這個編號的棋子 
+U32 myhash(U32 tpiece[16]);//傳入盤面，傳回hash值
 
 int index32[32] = { 31, 0, 1, 5, 2, 16, 27, 6, 3, 14, 17, 19, 28, 11, 7, 21, 30, 4, 15, 26, 13,
 18, 10, 20, 29, 25, 12, 9, 24, 8, 23, 22 };
@@ -53,7 +58,7 @@ U32 pMoves3[32] = {
 0x36310000,0x7D720000,0xEBE40000,0xC6C80000,0x63100000,0xD7200000,0xBE400000,0x6C800000 };//翻棋遮罩
 U32 file[4] = { 0x11111111,0x22222222,0x44444444,0x88888888 };//行遮罩 
 U32 row[8] = { 0x0000000F,0x000000F0,0x00000F00,0x0000F000,0x000F0000,0x00F00000,0x0F000000,0xF0000000 };//列遮罩 
-U32 piece[16]; //0空格- 帥k 士g 相m 車r 馬n 炮c 兵p *2 15未翻x 
+U32 piece[16]; //0空格- 帥k 士g 相m 車r 馬n 炮c 兵p *2(先紅) 15未翻x 
 U32 red, black, occupied;//紅 黑 有棋子 
 
 string move = "a1-a1";//下一步行動 用於背景 
@@ -80,10 +85,18 @@ int EAOMindex = 0;//Eallonlymove index
 int color;//0 red 1 black
 string src, dst;//棋盤編號版 a1~d4
 int srci, dsti;//index版 0~31
-int maxDepth = 7;
+int maxDepth = 10;
 U32 open = 0xffffffff;//非未翻棋
 U32 ch;//需要search的位置 
 int noReDepth = 1;
+U32 randtable[15][32];
+struct hashdata {
+	int count; int depth; U32 curPiece[16];
+};
+unordered_map<unsigned int, hashdata > hashtable;
+int test = 0;
+int testa = 0;
+int testb = 0;
 
 int main()
 {
@@ -94,13 +107,7 @@ int main()
 	readBoard();
 	drawOrNot();
 	dynamicPower();
-	int onboardi = 0;//計算場面上未翻棋數量 
-	for (int i = 0; i < 14; i++)
-	{
-		onboardi += DCount[i];
-	}
-	if (onboardi == 0)maxDepth = 10;
-	else if (onboardi <27 )maxDepth = 5;
+
 
 	dst = "0";
 	ai2();//決定行動 
@@ -110,6 +117,9 @@ int main()
 	if (color == 0) cout << "紅 " << endl;
 	else cout << "黑 " << endl;
 	createMovetxt();
+	cout << test << endl;
+	cout << testa << endl;
+	cout << testb << endl;
 	//system("pause");
 }
 
@@ -131,7 +141,8 @@ void ai2()
 		return;
 	}
 	chess(piece, 0);
-	search(0, piece, piece_count, -999999, 999999, 0);
+	U32 hashvalue = myhash(piece);
+	search(0, piece, piece_count, -999999, 999999, 0, hashvalue);
 	IndexToBoard(srci, dsti);
 }
 
@@ -441,8 +452,6 @@ U32 CGenCR(U32 x) {
 int countAva(int pie[14], int deep, U32 curPiece[16])//將士相車馬炮兵
 {
 	int eat[10];
-	int biggest = 0;
-	if (deep != maxDepth) biggest = 0;
 	int power = 0;
 	int redleft = 0;
 	int blackleft = 0;
@@ -509,21 +518,58 @@ int countAva(int pie[14], int deep, U32 curPiece[16])//將士相車馬炮兵
 	return power + movePoint - deep;
 }
 
-int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int flip)
+int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int flip, U32 hashvalue)
 {
+	test++;
+	U32 hashindex = hashvalue;
+	if (hashtable[hashindex].count != 0 && !flip) {// cant cut after flip
+		testa++;
+		if (hashtable[hashindex].depth % 2 == depth % 2) {
+			int temp = 0;
+			for (int i = 0; i < 16; i++) {
+				if (curPiece[i] != hashtable[hashindex].curPiece[i]) {
+					temp++;
+					break;
+				}
+			}
+			if (temp == 0) {
+				testb++;
+				if (hashtable[hashindex].depth <= depth) {
+					return hashtable[hashindex].count;
+					//cout << hashindex << endl;
+					//if (hashindex == 1802932495)cout << hashtable[hashindex].count << " depth " << hashtable[hashindex].depth << " " << depth << endl;
+			
+				}
+				else {
+					/*if (depth % 2 == 0) {//low search level cause wrong answer maybe?
+						if (hashtable[hashindex].count > alpha) {
+							
+							alpha = hashtable[hashindex].count;
+						}
+					}
+					else {
+						if (hashtable[hashindex].count < beta) {
+							
+							beta = hashtable[hashindex].count;
+						}
+					}*/
+				}
+			}
+		}
+	}
 	chess(curPiece, depth);
 	U32 taEM[50][2];//存可吃子的方法 0 src 1 dst 避免被往下搜尋時刷掉
 	int tAEMi = AEMindex;//alleatmove index
 	U32 taOM[50][2];//存可移動非吃子的方法 0 src 1 dst
 	int tAOMi = AOMindex;//allonlymove index
-	int etaemi = EAEMindex;
-	if (depth % 2 == 1) etaemi = AEMindex;
 	memcpy(taEM, allEatMove, sizeof(taEM));
 	memcpy(taOM, allOnlyMove, sizeof(taOM));
-	int re = countAva(curPie, depth, curPiece);
-
-	if (depth == maxDepth)
+	if (depth == maxDepth )
 	{
+		int re = countAva(curPie, depth, curPiece);
+		hashtable[hashindex].depth = depth;
+		hashtable[hashindex].count = re;
+		memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
 		return re;
 	}
 	int weight[100][3];//計算所有移動與翻棋的得分0src 1dst 2weight 
@@ -533,7 +579,7 @@ int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int
 		best = 9999999;
 	if (curPiece[15] != 0 && depth > noReDepth)//可以走空步
 	{
-		weight[wp][0] = 0; weight[wp][1] = 0; weight[wp][2] = search(depth + 1, curPiece, curPie, alpha, beta, flip);
+		weight[wp][0] = 0; weight[wp][1] = 0; weight[wp][2] = search(depth + 1, curPiece, curPie, alpha, beta, flip, hashvalue);
 		wp++;
 	}
 
@@ -562,8 +608,6 @@ int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int
 					break;
 				}
 			}
-			int c2pcopy;
-			c2pcopy = c2p;
 			tempPiece[c1p] ^= c1;//清除原位置c1
 			tempPiece[c1p] |= c2;//移動
 			tempPiece[0] |= c1;//空格+c1
@@ -572,9 +616,8 @@ int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int
 
 			weight[wp][0] = taEM[i][0];
 			weight[wp][1] = taEM[i][1];
-			weight[wp][2] = search(depth + 1, tempPiece, curPie, alpha, beta, flip);
+			weight[wp][2] = search(depth + 1, tempPiece, curPie, alpha, beta, flip, hashvalue^ randtable[c1p-1][GetIndex(c1)]^ randtable[c2p-1][GetIndex(c2)]^ randtable[c1p-1][GetIndex(c2)]);
 			curPie[c2p - 1]++;
-
 			if (depth % 2 == 0)//max
 			{
 				if (weight[wp][2] > alpha)
@@ -600,10 +643,18 @@ int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int
 			if (!flip) {
 				if (beta <= alpha)
 				{
-					if (depth % 2 == 1)
-						return beta;
-					else
+					if (depth % 2 == 0) {//min
+						hashtable[hashindex].depth = depth;
+						hashtable[hashindex].count = alpha;
+						memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
 						return alpha;
+					}
+					else {//max
+						hashtable[hashindex].depth = depth;
+						hashtable[hashindex].count = beta;
+						memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
+						return beta;
+					}
 				}
 			}
 			wp++;
@@ -632,8 +683,6 @@ int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int
 				break;
 			}
 		}
-		int c2pcopy = 0;
-		c2pcopy = c2p;
 		tempPiece[c1p] ^= c1;//清除原位置c1
 		tempPiece[c1p] |= c2;//移動
 		tempPiece[0] |= c1;//空格+c1
@@ -642,7 +691,7 @@ int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int
 		weight[wp][0] = taOM[i][0];
 		weight[wp][1] = taOM[i][1];
 
-		weight[wp][2] = search(depth + 1, tempPiece, curPie, alpha, beta, flip);
+		weight[wp][2] = search(depth + 1, tempPiece, curPie, alpha, beta, flip, hashvalue ^ randtable[c1p-1][GetIndex(c1)]  ^ randtable[c1p-1][GetIndex(c2)]);
 
 		if (depth % 2 == 0)//max
 		{
@@ -669,95 +718,114 @@ int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int
 		if (!flip) {
 			if (beta <= alpha)
 			{
-				if (depth % 2 == 1)
-					return beta;
-				else
+				if (depth % 2 == 0) {//min
+					hashtable[hashindex].depth = depth;
+					hashtable[hashindex].count = alpha;
+					memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
 					return alpha;
+				}
+				else {//max
+					hashtable[hashindex].depth = depth;
+					hashtable[hashindex].count = beta;
+					memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
+					return beta;
+				}
 			}
 		}
 		wp++;
 	}
 
-	if (curPiece[15] != 0)//先試翻棋 做完後call search 
-	{
-		for (int ssrc = 0; ssrc < 32; ssrc++) { //搜尋盤面上 32 個位置
-			if (curPiece[15] & (1 << ssrc) && ch & (1 << ssrc) && depth <= noReDepth) { //若為未翻子 在未翻子的遮罩內 depth<=3 
-				if (depth == 0)
-				{
-					int r = rand() % 6;;
-					string a[6] = { "⊙3⊙","(--;)","(〃ω〃)","(’-_-`)","|ω˙）","(*≧艸≦)" };
-					cout << a[r] + ".";
-				}
-				weight[wp][2] = 0;
-				//cout<<endl;
-				int a = 0;
-				for (int pID = 0; pID < 14; pID++) { //搜尋可能會翻出之子
-					if (DCount[pID]) { //若該兵種可能被翻出
-						a += DCount[pID];
-						U32 c = 1 << ssrc;
-						int cpID = pID + 1;
-						U32 tempPiece[16];
-						memcpy(tempPiece, curPiece, sizeof(tempPiece));
-						tempPiece[cpID] |= c;
-						tempPiece[15] ^= c;
-						DCount[pID]--;
-						//模擬該兵種翻出來
-							//cout<<pID<<" ";
-						weight[wp][0] = ssrc;
-						weight[wp][1] = ssrc;
-						weight[wp][2] += ((DCount[pID] + 1) * search(depth + 1, tempPiece, curPie, alpha, beta, 1));
-						DCount[pID]++;
-						//將模擬翻出的子復原
-					}
-				}
-				weight[wp][2] /= a;
-
-				if (depth % 2 == 0)//max
-				{
-					if (weight[wp][2] > alpha)
-					{
-						alpha = weight[wp][2];
-					}
-					if (weight[wp][2] > best)
-					{
-						best = weight[wp][2];
-					}
-				}
-				else//min
-				{
-					if (weight[wp][2] < beta)
-					{
-						beta = weight[wp][2];
-					}
-					if (weight[wp][2] < best)
-					{
-						best = weight[wp][2];
-					}
-				}
-				if (!flip) {
-					if (beta <= alpha)
-					{
-						if (depth % 2 == 1)
-							return beta;
-						else
-							return alpha;
-					}
-				}
-				wp++;
-			}
-		}
-	}
-
 	if (depth == 0)//max
 	{
+		int re = countAva(curPie, depth, curPiece);
+		if (best < re) {
+			if (curPiece[15] != 0)//先試翻棋 做完後call search 
+			{
+				maxDepth = 5;
+				for (int ssrc = 0; ssrc < 32; ssrc++) { //搜尋盤面上 32 個位置
+					if (curPiece[15] & (1 << ssrc) && ch & (1 << ssrc) && depth <= noReDepth) { //若為未翻子 在未翻子的遮罩內 depth<=3 
+						if (depth == 0)
+						{
+							int r = rand() % 6;;
+							string a[6] = { "⊙3⊙","(--;)","(〃ω〃)","(’-_-`)","|ω˙）","(*≧艸≦)" };
+							cout << a[r] + ".";
+						}
+						weight[wp][2] = 0;
+						//cout<<endl;
+						int a = 0;
+						for (int pID = 0; pID < 14; pID++) { //搜尋可能會翻出之子
+							if (DCount[pID]) { //若該兵種可能被翻出
+								a += DCount[pID];
+								U32 c = 1 << ssrc;
+								int cpID = pID + 1;
+								U32 tempPiece[16];
+								memcpy(tempPiece, curPiece, sizeof(tempPiece));
+								tempPiece[cpID] |= c;
+								tempPiece[15] ^= c;
+								DCount[pID]--;
+								//模擬該兵種翻出來
+									//cout<<pID<<" ";
+								weight[wp][0] = ssrc;
+								weight[wp][1] = ssrc;
+								weight[wp][2] += ((DCount[pID] + 1) * searchnf(depth + 1, tempPiece, curPie, alpha, beta, 1));
+								DCount[pID]++;
+								//將模擬翻出的子復原
+							}
+						}
+						weight[wp][2] /= a;
+
+						if (depth % 2 == 0)//max
+						{
+							if (weight[wp][2] > alpha)
+							{
+								alpha = weight[wp][2];
+							}
+							if (weight[wp][2] > best)
+							{
+								best = weight[wp][2];
+							}
+						}
+						else//min
+						{
+							if (weight[wp][2] < beta)
+							{
+								beta = weight[wp][2];
+							}
+							if (weight[wp][2] < best)
+							{
+								best = weight[wp][2];
+							}
+						}
+						if (!flip) {
+							if (beta <= alpha)
+							{
+								if (depth % 2 == 0) {//min
+									hashtable[hashindex].depth = depth;
+									hashtable[hashindex].count = alpha;
+									memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
+									return alpha;
+								}
+								else {//max
+									hashtable[hashindex].depth = depth;
+									hashtable[hashindex].count = beta;
+									memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
+									return beta;
+								}
+							}
+						}
+						wp++;
+					}
+				}
+			}
+
+		}
 		cout << endl << "------------------------------------" << endl;
 		int recordi = 0;
 		for (int i = wp - 1; i >= 0; i--)
 		{
-			if (depth == 0)
-			{
-				cout << weight[i][0] << " " << weight[i][1] << " " << weight[i][2] << endl;
-			}
+
+			cout << weight[i][0] << " " << weight[i][1] << " " << weight[i][2] << endl;
+
 			if (weight[i][2] == best)
 			{
 				recordi = i;
@@ -788,15 +856,316 @@ int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int
 						dsti = weight[ii][1];
 					}
 				}
+
 			}
 		}
-		//srci=weight[same[rnd]][0];
-		//dsti=weight[same[rnd]][1];
 	}
-	if (wp == 0 || best == 9999999 || best == -9999999) best = re;
+	if (wp == 0 || best == 9999999 || best == -9999999) {
+		int re = countAva(curPie, depth, curPiece);
+		best = re;
+	}
+	hashtable[hashindex].depth = depth;
+	hashtable[hashindex].count = best;
+	memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
 	return best;
 }
 
+int searchnf(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int flip)
+{
+	chess(curPiece, depth);
+	U32 taEM[50][2];//存可吃子的方法 0 src 1 dst 避免被往下搜尋時刷掉
+	int tAEMi = AEMindex;//alleatmove index
+	U32 taOM[50][2];//存可移動非吃子的方法 0 src 1 dst
+	int tAOMi = AOMindex;//allonlymove index
+	memcpy(taEM, allEatMove, sizeof(taEM));
+	memcpy(taOM, allOnlyMove, sizeof(taOM));
+	if (depth == maxDepth)
+	{
+		int re = countAva(curPie, depth, curPiece);
+		return re;
+	}
+	int weight[100][3];//計算所有移動與翻棋的得分0src 1dst 2weight 
+	int wp = 0;
+	int best = -9999999;
+	if (depth % 2 == 1)
+		best = 9999999;
+	if (curPiece[15] != 0 && depth > noReDepth)//可以走空步
+	{
+		weight[wp][0] = 0; weight[wp][1] = 0; weight[wp][2] = searchnf(depth + 1, curPiece, curPie, alpha, beta, flip);
+		wp++;
+	}
+
+
+	if (tAEMi > 0) {
+		for (int i = 0; i < tAEMi; i++)
+		{
+			U32 tempPiece[16];
+			memcpy(tempPiece, curPiece, sizeof(tempPiece));
+			weight[wp][2] = 0;
+			int c1p, c2p = -1;
+			U32 c1 = 1 << taEM[i][0];
+			U32 c2 = 1 << taEM[i][1];
+			//cout<<hex<<c2; 
+			for (int ii = 1; ii < 15; ii++) {
+				U32 check = curPiece[ii] & c1;
+				if (check != 0) {
+					c1p = ii;
+					break;
+				}
+			}
+			for (int ii = 1; ii < 15; ii++) {//找c2 清掉 剩餘棋子數更改 
+				U32 check = curPiece[ii] & c2;
+				if (check != 0) {
+					c2p = ii;
+					break;
+				}
+			}
+			tempPiece[c1p] ^= c1;//清除原位置c1
+			tempPiece[c1p] |= c2;//移動
+			tempPiece[0] |= c1;//空格+c1
+			tempPiece[c2p] ^= c2;//清除原位置c2
+			curPie[c2p - 1]--;
+
+			weight[wp][0] = taEM[i][0];
+			weight[wp][1] = taEM[i][1];
+			weight[wp][2] = searchnf(depth + 1, tempPiece, curPie, alpha, beta, flip);
+			curPie[c2p - 1]++;
+			if (depth % 2 == 0)//max
+			{
+				if (weight[wp][2] > alpha)
+				{
+					alpha = weight[wp][2];
+				}
+				if (weight[wp][2] > best)
+				{
+					best = weight[wp][2];
+				}
+			}
+			else//min
+			{
+				if (weight[wp][2] < beta)
+				{
+					beta = weight[wp][2];
+				}
+				if (weight[wp][2] < best)
+				{
+					best = weight[wp][2];
+				}
+			}
+			if (!flip) {
+				if (beta <= alpha)
+				{
+					if (depth % 2 == 0) {//min
+						return alpha;
+					}
+					else {//max
+						return beta;
+					}
+				}
+			}
+			wp++;
+		}
+	}
+
+	for (int i = 0; i < tAOMi; i++)//純移動 
+	{
+		U32 tempPiece[16];
+		memcpy(tempPiece, curPiece, sizeof(tempPiece));
+		weight[wp][2] = 0;
+		int c1p, c2p = -1;
+		U32 c1 = 1 << taOM[i][0];
+		U32 c2 = 1 << taOM[i][1];
+		for (int ii = 1; ii < 15; ii++) {
+			U32 check = curPiece[ii] & c1;
+			if (check != 0) {
+				c1p = ii;
+				break;
+			}
+		}
+		for (int ii = 1; ii < 15; ii++) {//找c2 清掉 剩餘棋子數更改 
+			U32 check = curPiece[ii] & c2;
+			if (check != 0) {
+				c2p = ii;
+				break;
+			}
+		}
+		tempPiece[c1p] ^= c1;//清除原位置c1
+		tempPiece[c1p] |= c2;//移動
+		tempPiece[0] |= c1;//空格+c1
+		tempPiece[0] ^= c2;//空格-c2
+
+		weight[wp][0] = taOM[i][0];
+		weight[wp][1] = taOM[i][1];
+
+		weight[wp][2] = searchnf(depth + 1, tempPiece, curPie, alpha, beta, flip);
+
+		if (depth % 2 == 0)//max
+		{
+			if (weight[wp][2] > best)
+			{
+				best = weight[wp][2];
+			}
+			if (weight[wp][2] > alpha)
+			{
+				alpha = weight[wp][2];
+			}
+		}
+		else//min
+		{
+			if (weight[wp][2] < best)
+			{
+				best = weight[wp][2];
+			}
+			if (weight[wp][2] < beta)
+			{
+				beta = weight[wp][2];
+			}
+		}
+		if (!flip) {
+			if (beta <= alpha)
+			{
+				if (depth % 2 == 0) {//min
+					return alpha;
+				}
+				else {//max
+					return beta;
+				}
+			}
+		}
+		wp++;
+	}
+
+	if (depth == 0)//max
+	{
+		int re = countAva(curPie, depth, curPiece);
+		if (best < re) {
+			int onboardi = 0;//計算場面上未翻棋數量 
+			for (int i = 0; i < 14; i++)
+			{
+				onboardi += DCount[i];
+			}
+			if (onboardi == 0)maxDepth = 10;
+			else if (onboardi < 27)maxDepth = 5;
+			if (curPiece[15] != 0)//先試翻棋 做完後call search 
+			{
+				for (int ssrc = 0; ssrc < 32; ssrc++) { //搜尋盤面上 32 個位置
+					if (curPiece[15] & (1 << ssrc) && ch & (1 << ssrc) && depth <= noReDepth) { //若為未翻子 在未翻子的遮罩內 depth<=3 
+						if (depth == 0)
+						{
+							int r = rand() % 6;;
+							string a[6] = { "⊙3⊙","(--;)","(〃ω〃)","(’-_-`)","|ω˙）","(*≧艸≦)" };
+							cout << a[r] + ".";
+						}
+						weight[wp][2] = 0;
+						//cout<<endl;
+						int a = 0;
+						for (int pID = 0; pID < 14; pID++) { //搜尋可能會翻出之子
+							if (DCount[pID]) { //若該兵種可能被翻出
+								a += DCount[pID];
+								U32 c = 1 << ssrc;
+								int cpID = pID + 1;
+								U32 tempPiece[16];
+								memcpy(tempPiece, curPiece, sizeof(tempPiece));
+								tempPiece[cpID] |= c;
+								tempPiece[15] ^= c;
+								DCount[pID]--;
+								//模擬該兵種翻出來
+									//cout<<pID<<" ";
+								weight[wp][0] = ssrc;
+								weight[wp][1] = ssrc;
+								weight[wp][2] += ((DCount[pID] + 1) * searchnf(depth + 1, tempPiece, curPie, alpha, beta, 1));
+								DCount[pID]++;
+								//將模擬翻出的子復原
+							}
+						}
+						weight[wp][2] /= a;
+
+						if (depth % 2 == 0)//max
+						{
+							if (weight[wp][2] > alpha)
+							{
+								alpha = weight[wp][2];
+							}
+							if (weight[wp][2] > best)
+							{
+								best = weight[wp][2];
+							}
+						}
+						else//min
+						{
+							if (weight[wp][2] < beta)
+							{
+								beta = weight[wp][2];
+							}
+							if (weight[wp][2] < best)
+							{
+								best = weight[wp][2];
+							}
+						}
+						if (!flip) {
+							if (beta <= alpha)
+							{
+								if (depth % 2 == 0) {//min
+									return alpha;
+								}
+								else {//max
+									return beta;
+								}
+							}
+						}
+						wp++;
+					}
+				}
+			}
+
+		}
+		cout << endl << "------------------------------------" << endl;
+		int recordi = 0;
+		for (int i = wp - 1; i >= 0; i--)
+		{
+
+			cout << weight[i][0] << " " << weight[i][1] << " " << weight[i][2] << endl;
+
+			if (weight[i][2] == best)
+			{
+				recordi = i;
+				srci = weight[i][0];
+				dsti = weight[i][1];
+			}
+		}
+
+		if (draw == 1)
+		{
+			if (best < 0); //可能輸 故意平手? 
+			else if (srci == past_walk[1][1] && dsti == past_walk[1][0])
+			{
+				cout << "draw denied" << endl;
+				weight[recordi][2] -= 999999;//可能會贏 選擇不平手? 
+				best = weight[0][2];
+				for (int ii = 0; ii < wp; ii++)
+				{
+					if (weight[ii][0] == srci)//那顆棋子相關全部都-999999 
+						weight[ii][2] -= 999999;
+				}
+				for (int ii = wp - 1; ii >= 0; ii--)//重新尋找 
+				{
+					if (weight[ii][2] > best)
+					{
+						best = weight[ii][2];
+						srci = weight[ii][0];
+						dsti = weight[ii][1];
+					}
+				}
+
+			}
+		}
+	}
+	if (wp == 0 || best == 9999999 || best == -9999999) {
+		int re = countAva(curPie, depth, curPiece);
+		best = re;
+	}
+	return best;
+}
 void drawOrNot()
 {
 	int a = past_walk[0][0];
@@ -1042,8 +1411,17 @@ void createMovetxt()
 
 void initial()
 {
+	random_device rd;
+	default_random_engine gen = default_random_engine(rd());
+	uniform_int_distribution<U32> dis(0, pow(2,32)-1);
+
 	for (int i = 0; i <= 14; i++)
 		piece[i] = 0;
+	for (int i = 0; i < 15; i++) {
+		for (int j = 0; j < 32; j++) {
+			randtable[i][j] = dis(gen);
+		}
+	}
 	red = 0;
 	black = 0;
 	occupied = 0xFFFFFFFF;
@@ -1074,4 +1452,17 @@ void IndexToBoard(int indexa, int indexb)
 	sss << 8 - a;
 	dst = aa + sss.str();
 	//cout<<"dst : "<<dst<<endl;
+}
+
+U32 myhash(U32 tpiece[16]) {
+	U32 hashvalue = 0;
+	for (int i = 1; i < 16; i++) { //1~14 為雙方兵種 0空格 15 未翻
+		U32 p = tpiece[i]; //取得棋子位置
+		while (p) { //將1~15 號的子都搜尋一遍
+			U32 mask = LS1B(p); //如果該棋子在多個位置,先取低位元的位置。
+			p ^= mask; //除去位於最低位元的該兵種
+			hashvalue^=randtable[i][GetIndex(mask)]; //將最低位元的兵種位置的隨機值xor hashtable
+		}
+	}
+	return hashvalue;
 }
