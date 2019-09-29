@@ -33,7 +33,7 @@ void createMovetxt();//創造move.txt 0走步 1翻棋
 void IndexToBoard(int indexa, int indexb);//把src dst從編號0~31->棋盤編號a1~d4 
 int countAva(int pie[14], int deep, U32 curPiece[16]);//呼叫則傳回當前棋版
 int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int flip, U32 hashvalue);//搜尋最佳走步 
-int searchnf(int depth, U32 curPiece[16], int curPie[14]);
+int searchnf(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int flip);
 void dynamicPower();//計算動態棋力 
 void drawOrNot();//由past_walk判斷是否平手 之後結果輸出給draw 
 int findPiece(int place, U32 curPiece[16]);//傳編號 回傳在這個編號的棋子 
@@ -589,84 +589,6 @@ int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int
 		wp++;
 	}
 
-	if (curPiece[15] != 0)//先試翻棋 做完後call search 
-	{
-		for (int ssrc = 0; ssrc < 32; ssrc++) { //搜尋盤面上 32 個位置
-			if (curPiece[15] & (1 << ssrc) && ch & (1 << ssrc) && depth <= noReDepth) { //若為未翻子 在未翻子的遮罩內 depth<=3 
-				if (depth == 0)
-				{
-					int r = rand() % 6;;
-					string a[6] = { "⊙3⊙","(--;)","(〃ω〃)","(’-_-`)","|ω˙）","(*≧艸≦)" };
-					cout << a[r] + ".";
-				}
-				weight[wp][2] = 0;
-				//cout<<endl;
-				int a = 0;
-				for (int pID = 0; pID < 14; pID++) { //搜尋可能會翻出之子
-					if (DCount[pID]) { //若該兵種可能被翻出
-						a += DCount[pID];
-						U32 c = 1 << ssrc;
-						int cpID = pID + 1;
-						U32 tempPiece[16];
-						memcpy(tempPiece, curPiece, sizeof(tempPiece));
-						tempPiece[cpID] |= c;
-						tempPiece[15] ^= c;
-						DCount[pID]--;
-						//模擬該兵種翻出來
-							//cout<<pID<<" ";
-						weight[wp][0] = ssrc;
-						weight[wp][1] = ssrc;
-						weight[wp][2] += ((DCount[pID] + 1) * searchnf(depth + 1, tempPiece, curPie));
-						DCount[pID]++;
-						//將模擬翻出的子復原
-					}
-				}
-				weight[wp][2] /= a;
-
-				if (depth % 2 == 0)//max
-				{
-					if (weight[wp][2] > alpha)
-					{
-						alpha = weight[wp][2];
-					}
-					if (weight[wp][2] > best)
-					{
-						best = weight[wp][2];
-					}
-				}
-				else//min
-				{
-					if (weight[wp][2] < beta)
-					{
-						beta = weight[wp][2];
-					}
-					if (weight[wp][2] < best)
-					{
-						best = weight[wp][2];
-					}
-				}
-				if (!flip) {
-					if (beta <= alpha)
-					{
-						if (depth % 2 == 0) {//min
-							hashtable[hashindex].depth = depth;
-							hashtable[hashindex].count = alpha;
-							memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
-							return alpha;
-						}
-						else {//max
-							hashtable[hashindex].depth = depth;
-							hashtable[hashindex].count = beta;
-							memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
-							return beta;
-						}
-					}
-				}
-				wp++;
-			}
-		}
-	}
-
 	if (tAEMi > 0) {
 		for (int i = 0; i < tAEMi; i++)
 		{
@@ -818,6 +740,84 @@ int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int
 		wp++;
 	}
 
+	if (curPiece[15] != 0)//先試翻棋 做完後call search 
+	{
+		for (int ssrc = 0; ssrc < 32; ssrc++) { //搜尋盤面上 32 個位置
+			if (curPiece[15] & (1 << ssrc) && ch & (1 << ssrc) && depth <= noReDepth) { //若為未翻子 在未翻子的遮罩內 depth<=3 
+				if (depth == 0)
+				{
+					int r = rand() % 6;;
+					string a[6] = { "⊙3⊙","(--;)","(〃ω〃)","(’-_-`)","|ω˙）","(*≧艸≦)" };
+					cout << a[r] + ".";
+				}
+				weight[wp][2] = 0;
+				//cout<<endl;
+				int a = 0;
+				for (int pID = 0; pID < 14; pID++) { //搜尋可能會翻出之子
+					if (DCount[pID]) { //若該兵種可能被翻出
+						a += DCount[pID];
+						U32 c = 1 << ssrc;
+						int cpID = pID + 1;
+						U32 tempPiece[16];
+						memcpy(tempPiece, curPiece, sizeof(tempPiece));
+						tempPiece[cpID] |= c;
+						tempPiece[15] ^= c;
+						DCount[pID]--;
+						//模擬該兵種翻出來
+							//cout<<pID<<" ";
+						weight[wp][0] = ssrc;
+						weight[wp][1] = ssrc;
+						weight[wp][2] += ((DCount[pID] + 1) * searchnf(depth + 1, tempPiece, curPie,alpha,beta,1));
+						DCount[pID]++;
+						//將模擬翻出的子復原
+					}
+				}
+				weight[wp][2] /= a;
+
+				if (depth % 2 == 0)//max
+				{
+					if (weight[wp][2] > alpha)
+					{
+						alpha = weight[wp][2];
+					}
+					if (weight[wp][2] > best)
+					{
+						best = weight[wp][2];
+					}
+				}
+				else//min
+				{
+					if (weight[wp][2] < beta)
+					{
+						beta = weight[wp][2];
+					}
+					if (weight[wp][2] < best)
+					{
+						best = weight[wp][2];
+					}
+				}
+				if (!flip) {
+					if (beta <= alpha)
+					{
+						if (depth % 2 == 0) {//min
+							hashtable[hashindex].depth = depth;
+							hashtable[hashindex].count = alpha;
+							memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
+							return alpha;
+						}
+						else {//max
+							hashtable[hashindex].depth = depth;
+							hashtable[hashindex].count = beta;
+							memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
+							return beta;
+						}
+					}
+				}
+				wp++;
+			}
+		}
+	}
+
 	if (depth == 0)//max
 	{
 		cout << endl << "------------------------------------" << endl;
@@ -871,7 +871,7 @@ int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int
 	return best;
 }
 
-int searchnf(int depth, U32 curPiece[16], int curPie[14])
+int searchnf(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int flip)
 {
 	chess(curPiece, depth);
 	U32 taEM[50][2];//存可吃子的方法 0 src 1 dst 避免被往下搜尋時刷掉
@@ -892,47 +892,10 @@ int searchnf(int depth, U32 curPiece[16], int curPie[14])
 		best = 9999999;
 	if (curPiece[15] != 0 && depth > noReDepth)//可以走空步
 	{
-		weight[wp][0] = 0; weight[wp][1] = 0; weight[wp][2] = searchnf(depth + 1, curPiece, curPie);
+		weight[wp][0] = 0; weight[wp][1] = 0; weight[wp][2] = searchnf(depth + 1, curPiece, curPie, alpha, beta, flip);
 		wp++;
 	}
 
-	if (curPiece[15] != 0)//先試翻棋 做完後call search 
-	{
-		for (int ssrc = 0; ssrc < 32; ssrc++) { //搜尋盤面上 32 個位置
-			if (curPiece[15] & (1 << ssrc) && ch & (1 << ssrc) && depth <= noReDepth) { //若為未翻子 在未翻子的遮罩內 depth<=3 
-				if (depth == 0)
-				{
-					int r = rand() % 6;;
-					string a[6] = { "⊙3⊙","(--;)","(〃ω〃)","(’-_-`)","|ω˙）","(*≧艸≦)" };
-					cout << a[r] + ".";
-				}
-				weight[wp][2] = 0;
-				//cout<<endl;
-				int a = 0;
-				for (int pID = 0; pID < 14; pID++) { //搜尋可能會翻出之子
-					if (DCount[pID]) { //若該兵種可能被翻出
-						a += DCount[pID];
-						U32 c = 1 << ssrc;
-						int cpID = pID + 1;
-						U32 tempPiece[16];
-						memcpy(tempPiece, curPiece, sizeof(tempPiece));
-						tempPiece[cpID] |= c;
-						tempPiece[15] ^= c;
-						DCount[pID]--;
-						//模擬該兵種翻出來
-							//cout<<pID<<" ";
-						weight[wp][0] = ssrc;
-						weight[wp][1] = ssrc;
-						weight[wp][2] += ((DCount[pID] + 1) * searchnf(depth + 1, tempPiece, curPie));
-						DCount[pID]++;
-						//將模擬翻出的子復原
-					}
-				}
-				weight[wp][2] /= a;
-				wp++;
-			}
-		}
-	}
 
 	if (tAEMi > 0) {
 		for (int i = 0; i < tAEMi; i++)
@@ -966,9 +929,41 @@ int searchnf(int depth, U32 curPiece[16], int curPie[14])
 
 			weight[wp][0] = taEM[i][0];
 			weight[wp][1] = taEM[i][1];
-			weight[wp][2] = searchnf(depth + 1, tempPiece, curPie);
+			weight[wp][2] = searchnf(depth + 1, tempPiece, curPie, alpha, beta, flip);
 			curPie[c2p - 1]++;
-
+			if (depth % 2 == 0)//max
+			{
+				if (weight[wp][2] > alpha)
+				{
+					alpha = weight[wp][2];
+				}
+				if (weight[wp][2] > best)
+				{
+					best = weight[wp][2];
+				}
+			}
+			else//min
+			{
+				if (weight[wp][2] < beta)
+				{
+					beta = weight[wp][2];
+				}
+				if (weight[wp][2] < best)
+				{
+					best = weight[wp][2];
+				}
+			}
+			if (!flip) {
+				if (beta <= alpha)
+				{
+					if (depth % 2 == 0) {//min
+						return alpha;
+					}
+					else {//max
+						return beta;
+					}
+				}
+			}
 			wp++;
 		}
 	}
@@ -1003,14 +998,118 @@ int searchnf(int depth, U32 curPiece[16], int curPie[14])
 		weight[wp][0] = taOM[i][0];
 		weight[wp][1] = taOM[i][1];
 
-		weight[wp][2] = searchnf(depth + 1, tempPiece, curPie);
+		weight[wp][2] = searchnf(depth + 1, tempPiece, curPie, alpha, beta, flip);
 
+		if (depth % 2 == 0)//max
+		{
+			if (weight[wp][2] > best)
+			{
+				best = weight[wp][2];
+			}
+			if (weight[wp][2] > alpha)
+			{
+				alpha = weight[wp][2];
+			}
+		}
+		else//min
+		{
+			if (weight[wp][2] < best)
+			{
+				best = weight[wp][2];
+			}
+			if (weight[wp][2] < beta)
+			{
+				beta = weight[wp][2];
+			}
+		}
+		if (!flip) {
+			if (beta <= alpha)
+			{
+				if (depth % 2 == 0) {//min
+					return alpha;
+				}
+				else {//max
+					return beta;
+				}
+			}
+		}
 		wp++;
+	}
+
+	if (curPiece[15] != 0)//先試翻棋 做完後call search 
+	{
+		for (int ssrc = 0; ssrc < 32; ssrc++) { //搜尋盤面上 32 個位置
+			if (curPiece[15] & (1 << ssrc) && ch & (1 << ssrc) && depth <= noReDepth) { //若為未翻子 在未翻子的遮罩內 depth<=3 
+				if (depth == 0)
+				{
+					int r = rand() % 6;;
+					string a[6] = { "⊙3⊙","(--;)","(〃ω〃)","(’-_-`)","|ω˙）","(*≧艸≦)" };
+					cout << a[r] + ".";
+				}
+				weight[wp][2] = 0;
+				//cout<<endl;
+				int a = 0;
+				for (int pID = 0; pID < 14; pID++) { //搜尋可能會翻出之子
+					if (DCount[pID]) { //若該兵種可能被翻出
+						a += DCount[pID];
+						U32 c = 1 << ssrc;
+						int cpID = pID + 1;
+						U32 tempPiece[16];
+						memcpy(tempPiece, curPiece, sizeof(tempPiece));
+						tempPiece[cpID] |= c;
+						tempPiece[15] ^= c;
+						DCount[pID]--;
+						//模擬該兵種翻出來
+							//cout<<pID<<" ";
+						weight[wp][0] = ssrc;
+						weight[wp][1] = ssrc;
+						weight[wp][2] += ((DCount[pID] + 1) * searchnf(depth + 1, tempPiece, curPie, alpha, beta, 1));
+						DCount[pID]++;
+						//將模擬翻出的子復原
+					}
+				}
+				weight[wp][2] /= a;
+
+				if (depth % 2 == 0)//max
+				{
+					if (weight[wp][2] > alpha)
+					{
+						alpha = weight[wp][2];
+					}
+					if (weight[wp][2] > best)
+					{
+						best = weight[wp][2];
+					}
+				}
+				else//min
+				{
+					if (weight[wp][2] < beta)
+					{
+						beta = weight[wp][2];
+					}
+					if (weight[wp][2] < best)
+					{
+						best = weight[wp][2];
+					}
+				}
+				if (!flip) {
+					if (beta <= alpha)
+					{
+						if (depth % 2 == 0) {//min
+							return alpha;
+						}
+						else {//max
+							return beta;
+						}
+					}
+				}
+				wp++;
+			}
+		}
 	}
 
 	if (depth == 0)//max
 	{
-
 		cout << endl << "------------------------------------" << endl;
 		int recordi = 0;
 		for (int i = wp - 1; i >= 0; i--)
