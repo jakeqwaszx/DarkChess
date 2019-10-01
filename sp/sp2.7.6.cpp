@@ -12,7 +12,7 @@
 
 typedef unsigned int U32;
 using namespace std;
-//同型表 sp2.7.3的加速 翻棋時呼叫簡化的search(searchnf) 著手排序翻棋排在前面(不能受益於alpha-beta)
+//同型表 sp2.7.3的加速 翻棋時呼叫簡化的search(searchnf) 翻走同型表分做 翻棋無alpha-beta
 U32 LS1B(U32 x) { return x & (-x); }//取得x的最低位元
 U32 MS1B(U32 x) { // Most Significant 1 Bit (LS1B)函式
 	x |= x >> 32; x |= x >> 16; x |= x >> 8;
@@ -32,8 +32,8 @@ void readBoard();//讀檔模式 讀取board.txt 把讀入檔案轉成bitboard 還沒倒著存入
 void createMovetxt();//創造move.txt 0走步 1翻棋 
 void IndexToBoard(int indexa, int indexb);//把src dst從編號0~31->棋盤編號a1~d4 
 int countAva(int pie[14], int deep, U32 curPiece[16]);//呼叫則傳回當前棋版
-int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int flip, U32 hashvalue);//搜尋最佳走步 
-int searchnf(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int flip);
+int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, U32 hashvalue);//搜尋最佳走步 
+int searchnf(int depth, U32 curPiece[16], int curPie[14], U32 hashvalue);
 void dynamicPower();//計算動態棋力 
 void drawOrNot();//由past_walk判斷是否平手 之後結果輸出給draw 
 int findPiece(int place, U32 curPiece[16]);//傳編號 回傳在這個編號的棋子 
@@ -94,6 +94,7 @@ struct hashdata {
 	int count; int depth; U32 curPiece[16];
 };
 unordered_map<unsigned int, hashdata > hashtable;
+unordered_map<unsigned int, hashdata > hashtablef;
 int test = 0;
 int testa = 0;
 int testb = 0;
@@ -148,7 +149,7 @@ void ai2()
 	}
 	chess(piece, 0);
 	U32 hashvalue = myhash(piece);
-	search(0, piece, piece_count, -999999, 999999, 0, hashvalue);
+	search(0, piece, piece_count, -999999, 999999, hashvalue);
 	IndexToBoard(srci, dsti);
 }
 
@@ -524,11 +525,11 @@ int countAva(int pie[14], int deep, U32 curPiece[16])//將士相車馬炮兵
 	return power + movePoint - deep;
 }
 
-int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int flip, U32 hashvalue)
+int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, U32 hashvalue)
 {
 	test++;
 	U32 hashindex = hashvalue;
-	if (hashtable[hashindex].count != 0 && !flip) {// cant cut after flip
+	if (hashtable[hashindex].count != 0) {
 		testa++;
 		if (hashtable[hashindex].depth % 2 == depth % 2) {
 			int temp = 0;
@@ -541,21 +542,21 @@ int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int
 			if (temp == 0) {
 				testb++;
 				if (hashtable[hashindex].depth <= depth) {
-					return hashtable[hashindex].count;
-					//cout << hashindex << endl;
-					//if (hashindex == 1802932495)cout << hashtable[hashindex].count << " depth " << hashtable[hashindex].depth << " " << depth << endl;
-			
+					return hashtable[hashindex].count;			
 				}
 				else {
-					/*if (depth % 2 == 0) {//low search level cause wrong answer maybe?
-						if (hashtable[hashindex].count > alpha) {
-							
+					/*if (depth % 2 == 0)//max
+					{
+						if (hashtable[hashindex].count > alpha)
+						{
 							alpha = hashtable[hashindex].count;
 						}
+
 					}
-					else {
-						if (hashtable[hashindex].count < beta) {
-							
+					else//min
+					{
+						if (hashtable[hashindex].count < beta)
+						{
 							beta = hashtable[hashindex].count;
 						}
 					}*/
@@ -585,7 +586,7 @@ int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int
 		best = 9999999;
 	if (curPiece[15] != 0 && depth > noReDepth)//可以走空步
 	{
-		weight[wp][0] = 0; weight[wp][1] = 0; weight[wp][2] = search(depth + 1, curPiece, curPie, alpha, beta, flip, hashvalue);
+		weight[wp][0] = 0; weight[wp][1] = 0; weight[wp][2] = search(depth + 1, curPiece, curPie, alpha, beta, hashvalue);
 		wp++;
 	}
 
@@ -621,7 +622,7 @@ int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int
 
 			weight[wp][0] = taEM[i][0];
 			weight[wp][1] = taEM[i][1];
-			weight[wp][2] = search(depth + 1, tempPiece, curPie, alpha, beta, flip, hashvalue^ randtable[c1p-1][GetIndex(c1)]^ randtable[c2p-1][GetIndex(c2)]^ randtable[c1p-1][GetIndex(c2)]);
+			weight[wp][2] = search(depth + 1, tempPiece, curPie, alpha, beta, hashvalue ^ randtable[c1p - 1][GetIndex(c1)] ^ randtable[c2p - 1][GetIndex(c2)] ^ randtable[c1p - 1][GetIndex(c2)]);
 			curPie[c2p - 1]++;
 			if (depth % 2 == 0)//max
 			{
@@ -645,23 +646,23 @@ int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int
 					best = weight[wp][2];
 				}
 			}
-			if (!flip) {
-				if (beta <= alpha)
-				{
-					if (depth % 2 == 0) {//min
-						hashtable[hashindex].depth = depth;
-						hashtable[hashindex].count = alpha;
-						memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
-						return alpha;
-					}
-					else {//max
-						hashtable[hashindex].depth = depth;
-						hashtable[hashindex].count = beta;
-						memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
-						return beta;
-					}
+
+			if (beta <= alpha)
+			{
+				if (depth % 2 == 0) {//min
+					hashtable[hashindex].depth = depth;
+					hashtable[hashindex].count = alpha;
+					memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
+					return alpha;
+				}
+				else {//max
+					hashtable[hashindex].depth = depth;
+					hashtable[hashindex].count = beta;
+					memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
+					return beta;
 				}
 			}
+
 			wp++;
 		}
 	}
@@ -696,7 +697,7 @@ int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int
 		weight[wp][0] = taOM[i][0];
 		weight[wp][1] = taOM[i][1];
 
-		weight[wp][2] = search(depth + 1, tempPiece, curPie, alpha, beta, flip, hashvalue ^ randtable[c1p-1][GetIndex(c1)]  ^ randtable[c1p-1][GetIndex(c2)]);
+		weight[wp][2] = search(depth + 1, tempPiece, curPie, alpha, beta, hashvalue ^ randtable[c1p - 1][GetIndex(c1)] ^ randtable[c1p - 1][GetIndex(c2)]);
 
 		if (depth % 2 == 0)//max
 		{
@@ -720,23 +721,23 @@ int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int
 				beta = weight[wp][2];
 			}
 		}
-		if (!flip) {
-			if (beta <= alpha)
-			{
-				if (depth % 2 == 0) {//min
-					hashtable[hashindex].depth = depth;
-					hashtable[hashindex].count = alpha;
-					memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
-					return alpha;
-				}
-				else {//max
-					hashtable[hashindex].depth = depth;
-					hashtable[hashindex].count = beta;
-					memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
-					return beta;
-				}
+
+		if (beta <= alpha)
+		{
+			if (depth % 2 == 0) {//min
+				hashtable[hashindex].depth = depth;
+				hashtable[hashindex].count = alpha;
+				memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
+				return alpha;
+			}
+			else {//max
+				hashtable[hashindex].depth = depth;
+				hashtable[hashindex].count = beta;
+				memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
+				return beta;
 			}
 		}
+
 		wp++;
 	}
 
@@ -767,7 +768,7 @@ int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int
 							//cout<<pID<<" ";
 						weight[wp][0] = ssrc;
 						weight[wp][1] = ssrc;
-						weight[wp][2] += ((DCount[pID] + 1) * searchnf(depth + 1, tempPiece, curPie,alpha,beta,1));
+						weight[wp][2] += ((DCount[pID] + 1) * searchnf(depth + 1, tempPiece, curPie, hashvalue));
 						DCount[pID]++;
 						//將模擬翻出的子復原
 					}
@@ -796,23 +797,23 @@ int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int
 						best = weight[wp][2];
 					}
 				}
-				if (!flip) {
-					if (beta <= alpha)
-					{
-						if (depth % 2 == 0) {//min
-							hashtable[hashindex].depth = depth;
-							hashtable[hashindex].count = alpha;
-							memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
-							return alpha;
-						}
-						else {//max
-							hashtable[hashindex].depth = depth;
-							hashtable[hashindex].count = beta;
-							memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
-							return beta;
-						}
+
+				if (beta <= alpha)
+				{
+					if (depth % 2 == 0) {//min
+						hashtable[hashindex].depth = depth;
+						hashtable[hashindex].count = alpha;
+						memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
+						return alpha;
+					}
+					else {//max
+						hashtable[hashindex].depth = depth;
+						hashtable[hashindex].count = beta;
+						memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
+						return beta;
 					}
 				}
+
 				wp++;
 			}
 		}
@@ -871,8 +872,32 @@ int search(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int
 	return best;
 }
 
-int searchnf(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, int flip)
+int searchnf(int depth, U32 curPiece[16], int curPie[14], U32 hashvalue)
 {
+	test++;
+	U32 hashindex = hashvalue;
+	if (hashtablef[hashindex].count != 0) {
+		testa++;
+		if (hashtablef[hashindex].depth % 2 == depth % 2) {
+			int temp = 0;
+			for (int i = 0; i < 16; i++) {
+				if (curPiece[i] != hashtablef[hashindex].curPiece[i]) {
+					temp++;
+					break;
+				}
+			}
+			if (temp == 0) {
+				testb++;
+				if (hashtablef[hashindex].depth <= depth) {
+					return hashtablef[hashindex].count;
+
+				}
+				else {
+
+				}
+			}
+		}
+	}
 	chess(curPiece, depth);
 	U32 taEM[50][2];//存可吃子的方法 0 src 1 dst 避免被往下搜尋時刷掉
 	int tAEMi = AEMindex;//alleatmove index
@@ -892,7 +917,7 @@ int searchnf(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, i
 		best = 9999999;
 	if (curPiece[15] != 0 && depth > noReDepth)//可以走空步
 	{
-		weight[wp][0] = 0; weight[wp][1] = 0; weight[wp][2] = searchnf(depth + 1, curPiece, curPie, alpha, beta, flip);
+		weight[wp][0] = 0; weight[wp][1] = 0; weight[wp][2] = searchnf(depth + 1, curPiece, curPie, hashvalue);
 		wp++;
 	}
 
@@ -929,14 +954,10 @@ int searchnf(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, i
 
 			weight[wp][0] = taEM[i][0];
 			weight[wp][1] = taEM[i][1];
-			weight[wp][2] = searchnf(depth + 1, tempPiece, curPie, alpha, beta, flip);
+			weight[wp][2] = searchnf(depth + 1, tempPiece, curPie, hashvalue);
 			curPie[c2p - 1]++;
 			if (depth % 2 == 0)//max
 			{
-				if (weight[wp][2] > alpha)
-				{
-					alpha = weight[wp][2];
-				}
 				if (weight[wp][2] > best)
 				{
 					best = weight[wp][2];
@@ -944,24 +965,9 @@ int searchnf(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, i
 			}
 			else//min
 			{
-				if (weight[wp][2] < beta)
-				{
-					beta = weight[wp][2];
-				}
 				if (weight[wp][2] < best)
 				{
 					best = weight[wp][2];
-				}
-			}
-			if (!flip) {
-				if (beta <= alpha)
-				{
-					if (depth % 2 == 0) {//min
-						return alpha;
-					}
-					else {//max
-						return beta;
-					}
 				}
 			}
 			wp++;
@@ -998,7 +1004,7 @@ int searchnf(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, i
 		weight[wp][0] = taOM[i][0];
 		weight[wp][1] = taOM[i][1];
 
-		weight[wp][2] = searchnf(depth + 1, tempPiece, curPie, alpha, beta, flip);
+		weight[wp][2] = searchnf(depth + 1, tempPiece, curPie, hashvalue);
 
 		if (depth % 2 == 0)//max
 		{
@@ -1006,31 +1012,12 @@ int searchnf(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, i
 			{
 				best = weight[wp][2];
 			}
-			if (weight[wp][2] > alpha)
-			{
-				alpha = weight[wp][2];
-			}
 		}
 		else//min
 		{
 			if (weight[wp][2] < best)
 			{
 				best = weight[wp][2];
-			}
-			if (weight[wp][2] < beta)
-			{
-				beta = weight[wp][2];
-			}
-		}
-		if (!flip) {
-			if (beta <= alpha)
-			{
-				if (depth % 2 == 0) {//min
-					return alpha;
-				}
-				else {//max
-					return beta;
-				}
 			}
 		}
 		wp++;
@@ -1063,7 +1050,7 @@ int searchnf(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, i
 							//cout<<pID<<" ";
 						weight[wp][0] = ssrc;
 						weight[wp][1] = ssrc;
-						weight[wp][2] += ((DCount[pID] + 1) * searchnf(depth + 1, tempPiece, curPie, alpha, beta, 1));
+						weight[wp][2] += ((DCount[pID] + 1) * searchnf(depth + 1, tempPiece, curPie, hashvalue));
 						DCount[pID]++;
 						//將模擬翻出的子復原
 					}
@@ -1072,10 +1059,6 @@ int searchnf(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, i
 
 				if (depth % 2 == 0)//max
 				{
-					if (weight[wp][2] > alpha)
-					{
-						alpha = weight[wp][2];
-					}
 					if (weight[wp][2] > best)
 					{
 						best = weight[wp][2];
@@ -1083,24 +1066,9 @@ int searchnf(int depth, U32 curPiece[16], int curPie[14], int alpha, int beta, i
 				}
 				else//min
 				{
-					if (weight[wp][2] < beta)
-					{
-						beta = weight[wp][2];
-					}
 					if (weight[wp][2] < best)
 					{
 						best = weight[wp][2];
-					}
-				}
-				if (!flip) {
-					if (beta <= alpha)
-					{
-						if (depth % 2 == 0) {//min
-							return alpha;
-						}
-						else {//max
-							return beta;
-						}
 					}
 				}
 				wp++;
