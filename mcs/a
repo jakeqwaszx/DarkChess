@@ -4,3 +4,4 @@ MCSsimulation2
   eaten
   802 break出去
   curSimNode->DCount[flip2]--;刪掉
+  if(currentParent->child[bestway]->flip[flipi]==-1) flipi=0;
