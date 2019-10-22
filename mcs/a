@@ -1,1 +1,6 @@
 a
+MCSsimulation2 
+  pipw動態
+  eaten
+  802 break出去
+  curSimNode->DCount[flip2]--;刪掉
