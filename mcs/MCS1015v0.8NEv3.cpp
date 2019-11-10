@@ -13,15 +13,15 @@
 #include <iomanip>
 #include <queue>
 #include <stack>
-//¥Ø«eª©¥»2.6 ¨Ï¥Îpmove2¾B¸n´î¤Ö·j´M®É¶¡ Â½¤l·j´M¥u¨ìdepth=2 depth3¥H¤W¥u·j²¾°Ê©Î¦Y¤l
-//ªı¤î¥­¤â ¸Ó¤l¥ş³¡-999999 ¦³­pºâmovepoint(¥i¦Y©Î³Q¦Y¥[´î¤À) ³Ó­t¥[´î¤À ³Ì«á¦Y©Î³Q¦Yºâ¤À§¹¦¨(°±¥Î) 
+//ç›®å‰ç‰ˆæœ¬2.6 ä½¿ç”¨pmove2é®ç½©æ¸›å°‘æœå°‹æ™‚é–“ ç¿»å­æœå°‹åªåˆ°depth=2 depth3ä»¥ä¸Šåªæœç§»å‹•æˆ–åƒå­
+//é˜»æ­¢å¹³æ‰‹ è©²å­å…¨éƒ¨-999999 æœ‰è¨ˆç®—movepoint(å¯åƒæˆ–è¢«åƒåŠ æ¸›åˆ†) å‹è² åŠ æ¸›åˆ† æœ€å¾Œåƒæˆ–è¢«åƒç®—åˆ†å®Œæˆ(åœç”¨) 
 
-//¥Ñ2.6.1§ï¦¨»X¦a¥dÃ¹ª© ´ú¸Õ¶¥¬q ¼ÒÀÀ¶¥¬q§ï¨} ¯à¦YÀu¥ı¦Y¤l 
+//ç”±2.6.1æ”¹æˆè’™åœ°å¡ç¾…ç‰ˆ æ¸¬è©¦éšæ®µ æ¨¡æ“¬éšæ®µæ”¹è‰¯ èƒ½åƒå„ªå…ˆåƒå­ 
 
 typedef unsigned int U32;
 using namespace std;
 
-struct node//¦s¾ã´Ê¾ğ ¥Î¨Ó§ó·s¯ª¥ı¸`ÂI 
+struct node//å­˜æ•´æ£µæ¨¹ ç”¨ä¾†æ›´æ–°ç¥–å…ˆç¯€é» 
 {
 	//double UCB;
 	double win;
@@ -32,110 +32,110 @@ struct node//¦s¾ã´Ê¾ğ ¥Î¨Ó§ó·s¯ª¥ı¸`ÂI
 	U32 piece[16];
 	U32 black;
 	U32 red;
-	int DCount[14];//Â½´Ñ¥Î 
+	int DCount[14];//ç¿»æ£‹ç”¨ 
 	int piece_count[14];
 	node *parent;
 	vector<node *> child;
 	bool leaf;
-	double flip[15];//¦sÂ½¥X¾÷²v  0~1000
+	double flip[15];//å­˜ç¿»å‡ºæ©Ÿç‡  0~1000
 	double h;
 	double MinmaxScore;
 };
 node *currentParent;
-double allRound=0;//Á`¦@¼ÒÀÀªº¦¸¼Æ 
-double c=0.75;//±±¨î±`¼Æ
+double allRound=0;//ç¸½å…±æ¨¡æ“¬çš„æ¬¡æ•¸ 
+double c=0.75;//æ§åˆ¶å¸¸æ•¸
 double Cp=0.1;
-int simRound=1;//¨C­ÓÂI¼ÒÀÀ¦¸¼Æ 
-int simDepth=20;//¨C­ÓÂI¼ÒÀÀ²`«× 
-vector <int>chMask;//Â½´Ñ¾B¸n ¦s½s¸¹ 
-int stdScore=0;//Àx¦s¼Ğ·Ç¤À¼Æ ¥Î¨Ó§PÂ_²{¦b½L­±¬O§_Àu¶Õ 
+int simRound=1;//æ¯å€‹é»æ¨¡æ“¬æ¬¡æ•¸ 
+int simDepth=20;//æ¯å€‹é»æ¨¡æ“¬æ·±åº¦ 
+vector <int>chMask;//ç¿»æ£‹é®ç½© å­˜ç·¨è™Ÿ 
+int stdScore=0;//å„²å­˜æ¨™æº–åˆ†æ•¸ ç”¨ä¾†åˆ¤æ–·ç¾åœ¨ç›¤é¢æ˜¯å¦å„ªå‹¢ 
 double MCSdepth=0;
 double MCSSimScore=0;
-double MCSMu=0;//¥ş¥­§¡ 
-double MCSOmega=0;//¼Ğ·Ç®t
+double MCSMu=0;//å…¨å¹³å‡ 
+double MCSOmega=0;//æ¨™æº–å·®
 double MCSa=0.3;
 double MCSk=3; 
 vector<double> MCSScore;
 double MCSallScore=0;
-double PGL=0;//¥Î500³õºâ¥­§¡ªø«× 
+double PGL=0;//ç”¨500å ´ç®—å¹³å‡é•·åº¦ 
 
-U32 LS1B(U32 x){ return x&(-x);}//¨ú±oxªº³Ì§C¦ì¤¸
-U32 MS1B(U32 x){ // Most Significant 1 Bit (LS1B)¨ç¦¡
+U32 LS1B(U32 x){ return x&(-x);}//å–å¾—xçš„æœ€ä½ä½å…ƒ
+U32 MS1B(U32 x){ // Most Significant 1 Bit (LS1B)å‡½å¼
 	x |= x >> 32; x |= x >> 16; x |= x >> 8;
 	x |= x >> 4; x |= x >> 2; x |= x >> 1;
-	return (x >> 1) + 1; //¥i¥H¨ú±o¤@¦ê¦ì¤¸¤¤³Ì¥ªÃä¤£¬°¹sªº¦ì¤¸
+	return (x >> 1) + 1; //å¯ä»¥å–å¾—ä¸€ä¸²ä½å…ƒä¸­æœ€å·¦é‚Šä¸ç‚ºé›¶çš„ä½å…ƒ
 }
-U32 CGen(int ssrc,U32 toccupied);//ªğÁÙ¬¶¦ì 
+U32 CGen(int ssrc,U32 toccupied);//è¿”é‚„ç‚®ä½ 
 U32 CGenCR(U32 x);
 U32 CGenCL(U32 x);
 int BitsHash(U32 x){return (x * 0x08ED2BE6) >> 27;}
-void initial();//ªì©l¤Æ 
-void chess(U32 tblack,U32 tred,U32 tpiece[16],int deep);//´M§ä¥i¥Î²¾°Ê
-void ai2();//ai ver2.0 Æg ¨Ï¥Îsearch 
-void ai3();//°õ¦æ»X¦a¥dÃ¹ 
-int MCSsimulation(int curSimRound,node *SimNode);//¼ÒÀÀ¨«¨B ¶Ç¤J¼ÒÀÀ¦¸¼Æ»P¼ÒÀÀ½L­± ¦^¶ÇÀu¶Õ³õ¼Æ
+void initial();//åˆå§‹åŒ– 
+void chess(U32 tblack,U32 tred,U32 tpiece[16],int deep);//å°‹æ‰¾å¯ç”¨ç§»å‹•
+void ai2();//ai ver2.0 è®š ä½¿ç”¨search 
+void ai3();//åŸ·è¡Œè’™åœ°å¡ç¾… 
+int MCSsimulation(int curSimRound,node *SimNode);//æ¨¡æ“¬èµ°æ­¥ å‚³å…¥æ¨¡æ“¬æ¬¡æ•¸èˆ‡æ¨¡æ“¬ç›¤é¢ å›å‚³å„ªå‹¢å ´æ•¸
 double MCSsimulation2(node *SimNode); 
 int MCSCount(int pie[14]);
-void readBoard();//ÅªÀÉ¼Ò¦¡ Åª¨úboard.txt §âÅª¤JÀÉ®×Âà¦¨bitboard ÁÙ¨S­ËµÛ¦s¤J 
-void createMovetxt();//³Ğ³ymove.txt 0¨«¨B 1Â½´Ñ 
-void IndexToBoard(int indexa,int indexb);//§âsrc dst±q½s¸¹0~31->´Ñ½L½s¸¹a1~d4 
-double countAva(int pie[14],int deep,U32 curPiece[16]);//©I¥s«h¶Ç¦^·í«e´Ñª©
-int search(int depth,U32 curPiece[16],U32 curRed,U32 curBlack,U32 curOccupied,int curPie[14],int alpha,int beta);//·j´M³Ì¨Î¨«¨B 
-int onewaySearch(int depth,U32 curPiece[16],U32 curRed,U32 curBlack,U32 curOccupied,int curPie[14],int alpha,int beta,int eat);//³æ¦V·j´M ´ú¸Õ 
-int searchMove(int depth,U32 curPiece[16],U32 curRed,U32 curBlack,U32 curOccupied,int curPie[14],int alpha,int beta);//¥ı·j´M¥i¨«ª©­±
-void dynamicPower(int curPie[14]);//­pºâ°ÊºA´Ñ¤O 
-void drawOrNot();//¥Ñpast_walk§PÂ_¬O§_¥­¤â ¤§«áµ²ªG¿é¥Xµ¹draw 
-int findPiece(int place,U32 curPiece[16]);//¶Ç½s¸¹ ¦^¶Ç¦b³o­Ó½s¸¹ªº´Ñ¤l 
+void readBoard();//è®€æª”æ¨¡å¼ è®€å–board.txt æŠŠè®€å…¥æª”æ¡ˆè½‰æˆbitboard é‚„æ²’å€’è‘—å­˜å…¥ 
+void createMovetxt();//å‰µé€ move.txt 0èµ°æ­¥ 1ç¿»æ£‹ 
+void IndexToBoard(int indexa,int indexb);//æŠŠsrc dstå¾ç·¨è™Ÿ0~31->æ£‹ç›¤ç·¨è™Ÿa1~d4 
+double countAva(int pie[14],int deep,U32 curPiece[16]);//å‘¼å«å‰‡å‚³å›ç•¶å‰æ£‹ç‰ˆ
+int search(int depth,U32 curPiece[16],U32 curRed,U32 curBlack,U32 curOccupied,int curPie[14],int alpha,int beta);//æœå°‹æœ€ä½³èµ°æ­¥ 
+int onewaySearch(int depth,U32 curPiece[16],U32 curRed,U32 curBlack,U32 curOccupied,int curPie[14],int alpha,int beta,int eat);//å–®å‘æœå°‹ æ¸¬è©¦ 
+int searchMove(int depth,U32 curPiece[16],U32 curRed,U32 curBlack,U32 curOccupied,int curPie[14],int alpha,int beta);//å…ˆæœå°‹å¯èµ°ç‰ˆé¢
+void dynamicPower(int curPie[14]);//è¨ˆç®—å‹•æ…‹æ£‹åŠ› 
+void drawOrNot();//ç”±past_walkåˆ¤æ–·æ˜¯å¦å¹³æ‰‹ ä¹‹å¾Œçµæœè¼¸å‡ºçµ¦draw 
+int findPiece(int place,U32 curPiece[16]);//å‚³ç·¨è™Ÿ å›å‚³åœ¨é€™å€‹ç·¨è™Ÿçš„æ£‹å­ 
 
 int index32[32] = {31, 0, 1, 5, 2, 16, 27, 6, 3, 14, 17, 19, 28, 11, 7, 21, 30, 4, 15, 26, 13,
 18, 10, 20, 29, 25, 12, 9, 24, 8, 23, 22};
-int GetIndex(U32 mask){ return index32[BitsHash(mask)];}//¿é¤J¾B¸nªğ¦^´Ñ½L½s¸¹
+int GetIndex(U32 mask){ return index32[BitsHash(mask)];}//è¼¸å…¥é®ç½©è¿”å›æ£‹ç›¤ç·¨è™Ÿ
 U32 pMoves[32]={0x00000012,0x00000025,0x0000004A,0x00000084,0x00000121,0x00000252,0x000004A4,0x00000848,
 0x00001210,0x00002520,0x00004A40,0x00008480,0x00012100,0x00025200,0x0004A400,0x00084800,
 0x00121000,0x00252000,0x004A4000,0x00848000,0x01210000,0x02520000,0x04A40000,0x08480000,
-0x12100000,0x25200000,0x4A400000,0x84800000,0x21000000,0x52000000,0xA4000000,0x48000000};//´Ñ¤l²¾°Ê¾B¸n
+0x12100000,0x25200000,0x4A400000,0x84800000,0x21000000,0x52000000,0xA4000000,0x48000000};//æ£‹å­ç§»å‹•é®ç½©
 U32 pMoves2[32]={
 0x00000116,0x0000022D,0x0000044B,0x00000886,0x00001161,0x000022D2,0x000044B4,0x00008868,
 0x00011611,0x00022D22,0x00044B44,0x00088688,0x00116110,0x0022D220,0x0044B440,0x00886880,
 0x01161100,0x022D2200,0x044B4400,0x08868800,0x11611000,0x22D22000,0x44B44000,0x88688000,
-0x16110000,0x2D220000,0x4B440000,0x86880000,0x61100000,0xD2200000,0xB4400000,0x68800000};//Â½´Ñ¾B¸n
+0x16110000,0x2D220000,0x4B440000,0x86880000,0x61100000,0xD2200000,0xB4400000,0x68800000};//ç¿»æ£‹é®ç½©
 U32 pMoves3[32]={
 0x00000136,0x0000027D,0x000004EB,0x000008C6,0x00001363,0x000027D7,0x00004EB4,0x00008C6C,
 0x00013631,0x00027D72,0x0004EBE4,0x0008C6C8,0x00136310,0x0027D720,0x004EBE40,0x008C6C80,
 0x01363100,0x027D7200,0x04EBE400,0x08C6C800,0x13631000,0x27D72000,0x4EBE4000,0x8C6C8000,
-0x36310000,0x7D720000,0xEBE40000,0xC6C80000,0x63100000,0xD7200000,0xBE400000,0x6C800000};//Â½´Ñ¾B¸n
-U32 file[4]={0x11111111,0x22222222,0x44444444,0x88888888};//¦æ¾B¸n 
-U32 row[8]={0x0000000F,0x000000F0,0x00000F00,0x0000F000,0x000F0000,0x00F00000,0x0F000000,0xF0000000};//¦C¾B¸n 
-U32 piece[16]; //0ªÅ®æ- «Ók ¤hg ¬Ûm ¨®r °¨n ¬¶c §Lp *2 15¥¼Â½x 
-U32 red,black,occupied;//¬õ ¶Â ¦³´Ñ¤l 
+0x36310000,0x7D720000,0xEBE40000,0xC6C80000,0x63100000,0xD7200000,0xBE400000,0x6C800000};//ç¿»æ£‹é®ç½©
+U32 file[4]={0x11111111,0x22222222,0x44444444,0x88888888};//è¡Œé®ç½© 
+U32 row[8]={0x0000000F,0x000000F0,0x00000F00,0x0000F000,0x000F0000,0x00F00000,0x0F000000,0xF0000000};//åˆ—é®ç½© 
+U32 piece[16]; //0ç©ºæ ¼- å¸¥k å£«g ç›¸m è»Šr é¦¬n ç‚®c å…µp *2 15æœªç¿»x 
+U32 red,black,occupied;//ç´… é»‘ æœ‰æ£‹å­ 
 
-string move="a1-a1";//¤U¤@¨B¦æ°Ê ¥Î©ó­I´º 
-int piece_count[14]={1,2,2,2,2,2,5,1,2,2,2,2,2,5};//³Ñ¾l´Ñ¤l¼Æ 0-6 7-13
-int DCount[14]={1,2,2,2,2,2,5,1,2,2,2,2,2,5};//³Ñ¾l¥¼Â½¤l 
-string current_position[32];//½L­±ª¬ªpÁ`Äı 
+string move="a1-a1";//ä¸‹ä¸€æ­¥è¡Œå‹• ç”¨æ–¼èƒŒæ™¯ 
+int piece_count[14]={1,2,2,2,2,2,5,1,2,2,2,2,2,5};//å‰©é¤˜æ£‹å­æ•¸ 0-6 7-13
+int DCount[14]={1,2,2,2,2,2,5,1,2,2,2,2,2,5};//å‰©é¤˜æœªç¿»å­ 
+string current_position[32];//ç›¤é¢ç‹€æ³ç¸½è¦½ 
 string history; 
-int timeCount;//³Ñ¾l®É¶¡ 
-int initailBoard=1;//¬O§_Åª¨úªì©lª©­± 
-int past_walk[7][2]={0,0,0,0,0,0,0,0,0,0,0,0,0,0};//«e¤C¨B ¥Î¨Ó³B²z¥­§½°İÃD 
-int piPw[14]={6000,2700,900,400,150,2000,100,6000,2700,900,400,150,2000,100};//´Ñ¤l¤À¼Æ 
-int draw=0;//0µL¥­¤â±¡ªp 1¦³¥i¯à¶i¤J¥­¤â 
-//int RMcount=13;//Åª¨ú¼Ò¦¡»İ­n ±q13¦æ¶}©lÅª¨úµ²ªG 
+int timeCount;//å‰©é¤˜æ™‚é–“ 
+int initailBoard=1;//æ˜¯å¦è®€å–åˆå§‹ç‰ˆé¢ 
+int past_walk[7][2]={0,0,0,0,0,0,0,0,0,0,0,0,0,0};//å‰ä¸ƒæ­¥ ç”¨ä¾†è™•ç†å¹³å±€å•é¡Œ 
+int piPw[14]={6000,2700,900,400,150,2000,100,6000,2700,900,400,150,2000,100};//æ£‹å­åˆ†æ•¸ 
+int draw=0;//0ç„¡å¹³æ‰‹æƒ…æ³ 1æœ‰å¯èƒ½é€²å…¥å¹³æ‰‹ 
+//int RMcount=13;//è®€å–æ¨¡å¼éœ€è¦ å¾13è¡Œé–‹å§‹è®€å–çµæœ 
 
-U32 allEatMove[50][2];//¦s¥i¦Y¤lªº¤èªk 0 src 1 dst ¥i°õ¦æ 
+U32 allEatMove[50][2];//å­˜å¯åƒå­çš„æ–¹æ³• 0 src 1 dst å¯åŸ·è¡Œ 
 int AEMindex=0;//alleatmove index
-U32 allOnlyMove[50][2];//¦s¥i²¾°Ê«D¦Y¤lªº¤èªk 0 src 1 dst
+U32 allOnlyMove[50][2];//å­˜å¯ç§»å‹•éåƒå­çš„æ–¹æ³• 0 src 1 dst
 int AOMindex=0;//allonlymove index
-U32 EallEatMove[50][2];//¦s¹ï¤â¥i¦Y¤lªº¤èªk 0 src 1 dst ¤U¦^¦X¤~¦³¥i¯à°õ¦æ 
+U32 EallEatMove[50][2];//å­˜å°æ‰‹å¯åƒå­çš„æ–¹æ³• 0 src 1 dst ä¸‹å›åˆæ‰æœ‰å¯èƒ½åŸ·è¡Œ 
 int EAEMindex=0;//Ealleatmove index
-U32 EallOnlyMove[50][2];//¦s¹ï¤â¥i²¾°Ê«D¦Y¤lªº¤èªk 0 src 1 dst
+U32 EallOnlyMove[50][2];//å­˜å°æ‰‹å¯ç§»å‹•éåƒå­çš„æ–¹æ³• 0 src 1 dst
 int EAOMindex=0;//Eallonlymove index
 
 int color;//0 red 1 black
-string src,dst;//´Ñ½L½s¸¹ª© a1~d4
-int srci,dsti;//indexª© 0~31
+string src,dst;//æ£‹ç›¤ç·¨è™Ÿç‰ˆ a1~d4
+int srci,dsti;//indexç‰ˆ 0~31
 int maxDepth=12;
-U32 open=0xffffffff;//«D¥¼Â½´Ñ
-U32 ch;//»İ­nsearchªº¦ì¸m 
+U32 open=0xffffffff;//éæœªç¿»æ£‹
+U32 ch;//éœ€è¦searchçš„ä½ç½® 
 int noReDepth=1;
 
 int main()
@@ -143,22 +143,22 @@ int main()
 	clock_t start, stop;
 	start = clock();
 	srand(time(NULL));
-	initial();//ªì©l¤Æ 
+	initial();//åˆå§‹åŒ– 
 	readBoard();
 	drawOrNot();
 	dynamicPower(piece_count);
-	U32 onboard2 = piece[15]; //¨ú±o´Ñ¤l¦ì¸m
-	int onboardi=0,onboardi2=0;//­pºâ³õ­±¤W¦³´Ñªº¼Æ¶q 
+	U32 onboard2 = piece[15]; //å–å¾—æ£‹å­ä½ç½®
+	int onboardi=0,onboardi2=0;//è¨ˆç®—å ´é¢ä¸Šæœ‰æ£‹çš„æ•¸é‡ 
 	U32 onboard=(piece[15]|piece[0])^0xffffffff;
 	while(onboard2)
 	{
-		U32 mask = LS1B(onboard2); //¦pªG¸Ó´Ñ¤l¦b¦h­Ó¦ì¸m,¥ı¨ú§C¦ì¤¸ªº¦ì¸m¡C
+		U32 mask = LS1B(onboard2); //å¦‚æœè©²æ£‹å­åœ¨å¤šå€‹ä½ç½®,å…ˆå–ä½ä½å…ƒçš„ä½ç½®ã€‚
 		onboardi2++;
 		onboard2 ^= mask;
 	}
 	while(onboard)
 	{
-		U32 mask = LS1B(onboard); //¦pªG¸Ó´Ñ¤l¦b¦h­Ó¦ì¸m,¥ı¨ú§C¦ì¤¸ªº¦ì¸m¡C
+		U32 mask = LS1B(onboard); //å¦‚æœè©²æ£‹å­åœ¨å¤šå€‹ä½ç½®,å…ˆå–ä½ä½å…ƒçš„ä½ç½®ã€‚
 		onboardi++;
 		onboard ^= mask;
 	}
@@ -171,17 +171,17 @@ int main()
 	else if(OBP>60)maxDepth=8;
 	else if(OBP>40)maxDepth=9;
 	else if(OBP>20)maxDepth=10;*/
-	cout<<" game tree½ÆÂø«×¬° : "<<OBP<<endl; 
-	int end=1;//µ²§ô«h=0
+	cout<<" game treeè¤‡é›œåº¦ç‚º : "<<OBP<<endl; 
+	int end=1;//çµæŸå‰‡=0
 	while(end)
 	{
 		dst="0";
-		ai3();//¨M©w¦æ°Ê 
+		ai3();//æ±ºå®šè¡Œå‹• 
 		stop = clock();
-		cout <<" ¦¹¨B¯Ó®É : " << double(stop - start) / CLOCKS_PER_SEC <<" ¬í(ºë·Ç«×0.001¬í) "<<endl;
-		cout <<" ¥»¤è¬° : ";
-		if(color==0) cout<<"¬õ "<<endl;
-		else cout<<"¶Â "<<endl;
+		cout <<" æ­¤æ­¥è€—æ™‚ : " << double(stop - start) / CLOCKS_PER_SEC <<" ç§’(ç²¾æº–åº¦0.001ç§’) "<<endl;
+		cout <<" æœ¬æ–¹ç‚º : ";
+		if(color==0) cout<<"ç´… "<<endl;
+		else cout<<"é»‘ "<<endl;
 		createMovetxt();
 		end=0;
 	}
@@ -191,7 +191,7 @@ void ai2()
 {
 	open=0xffffffff;
 	ch=0x00000000;
-	open^=piece[15];//«D¥¼Â½´Ñ
+	open^=piece[15];//éæœªç¿»æ£‹
 	while(open)
 	{
 		U32 take=LS1B(open);
@@ -216,7 +216,7 @@ void ai3()
 		IndexToBoard(9,9);
 		return;
 	}
-	//§âªì©l½L­±©ñ¤Jdepth=0 ²Ä0­Ónode ¤§«ádepth+1 ¦¹¬°®Úµ²ÂI ¨C¦¸selection¥Ñ¦¹¶}©l©¹¤U§ä ¥ÑFcurNode->child[0~?]¤¤§ä¤@¤U¨Ã©¹¤U­«½Æ 
+	//æŠŠåˆå§‹ç›¤é¢æ”¾å…¥depth=0 ç¬¬0å€‹node ä¹‹å¾Œdepth+1 æ­¤ç‚ºæ ¹çµé» æ¯æ¬¡selectionç”±æ­¤é–‹å§‹å¾€ä¸‹æ‰¾ ç”±FcurNode->child[0~?]ä¸­æ‰¾ä¸€ä¸‹ä¸¦å¾€ä¸‹é‡è¤‡ 
 	node *FcurNode = new node();
 	FcurNode->win = 0;
 	FcurNode->round = 0;
@@ -228,7 +228,7 @@ void ai3()
 	FcurNode->black=piece[8]|piece[9]|piece[10]|piece[11]|piece[12]|piece[13]|piece[14];
 	FcurNode->parent = NULL;
 	FcurNode->leaf = false;
-	FcurNode->src = -1;//¥u¦³FcurNode 
+	FcurNode->src = -1;//åªæœ‰FcurNode 
 	FcurNode->MinmaxScore = 0;
 	currentParent=FcurNode;
 	double curPGL=0;
@@ -245,7 +245,7 @@ void ai3()
 	PGL = curPGL;
 	curwin /= 1000;
 	curlose /= 1000;
-	cout<<" ¥­§¡²`«× : "<<curPGL<<" ³Ó²v : "<<curwin<<" ±Ñ²v : "<<curlose<<endl;
+	cout<<" å¹³å‡æ·±åº¦ : "<<curPGL<<" å‹ç‡ : "<<curwin<<" æ•—ç‡ : "<<curlose<<endl;
 	/*
 	FcurNode->depth++;
 	int test = 0;
@@ -261,9 +261,9 @@ void ai3()
 	cout<<" test "<<test<<" "<<testd<<endl;
 	*/
 	chess(currentParent->black,currentParent->red,currentParent->piece,currentParent->depth);
-	U32 taEM[30][2];//¦s¥i¦Y¤lªº¤èªk 0 src 1 dst Á×§K³Q©¹¤U·j´M®É¨ê±¼
+	U32 taEM[30][2];//å­˜å¯åƒå­çš„æ–¹æ³• 0 src 1 dst é¿å…è¢«å¾€ä¸‹æœå°‹æ™‚åˆ·æ‰
 	int tAEMi=AEMindex;//alleatmove index
-	U32 taOM[30][2];//¦s¥i²¾°Ê«D¦Y¤lªº¤èªk 0 src 1 dst
+	U32 taOM[30][2];//å­˜å¯ç§»å‹•éåƒå­çš„æ–¹æ³• 0 src 1 dst
 	int tAOMi=AOMindex;//allonlymove index
 	memcpy(taEM,allEatMove,sizeof(taEM));
 	memcpy(taOM,allOnlyMove,sizeof(taOM));
@@ -298,28 +298,28 @@ void ai3()
 				break;
 			}
 		}
-		for(int ii=1;ii<15;ii++){//§äc2 ²M±¼ ³Ñ¾l´Ñ¤l¼Æ§ó§ï 
+		for(int ii=1;ii<15;ii++){//æ‰¾c2 æ¸…æ‰ å‰©é¤˜æ£‹å­æ•¸æ›´æ”¹ 
 			U32 check=curNode->piece[ii]&c2;
 			if(check!=0){
 				c2p=ii;
 				break;
 			}
 		}
-		curNode->piece[c1p]^=c1;//²M°£­ì¦ì¸mc1
-		curNode->piece[c1p]|=c2;//²¾°Ê
-		curNode->piece[0]|=c1;//ªÅ®æ+c1
+		curNode->piece[c1p]^=c1;//æ¸…é™¤åŸä½ç½®c1
+		curNode->piece[c1p]|=c2;//ç§»å‹•
+		curNode->piece[0]|=c1;//ç©ºæ ¼+c1
 		if(c2p!=-1)
 		{
-			curNode->piece[c2p]^=c2;//²M°£­ì¦ì¸mc2
+			curNode->piece[c2p]^=c2;//æ¸…é™¤åŸä½ç½®c2
 			curNode->piece_count[c2p-1]--;
 			if(8>c1p)
-			{//¬õ¦Y¶Â
+			{//ç´…åƒé»‘
 				curNode->red^=c1;
 				curNode->black^=c2;
 				curNode->red|=c2;
 			}
 			else
-			{//¶Â¦Y¬õ 
+			{//é»‘åƒç´… 
 				curNode->black^=c1;
 				curNode->red^=c2;
 				curNode->black|=c2;
@@ -358,17 +358,17 @@ void ai3()
 				break;
 			}
 		}
-		curNode->piece[c1p]^=c1;//²M°£­ì¦ì¸mc1
-		curNode->piece[c1p]|=c2;//²¾°Ê
-		curNode->piece[0]|=c1;//ªÅ®æ+c1
-		curNode->piece[0]^=c2;//²M°£­ì¦ì¸mc2
+		curNode->piece[c1p]^=c1;//æ¸…é™¤åŸä½ç½®c1
+		curNode->piece[c1p]|=c2;//ç§»å‹•
+		curNode->piece[0]|=c1;//ç©ºæ ¼+c1
+		curNode->piece[0]^=c2;//æ¸…é™¤åŸä½ç½®c2
 		if(8>c1p)
-		{//¬õ¦Y¶Â
+		{//ç´…åƒé»‘
 			curNode->red^=c1;
 			curNode->red|=c2;
 		}
 		else
-		{//¶Â¦Y¬õ 
+		{//é»‘åƒç´… 
 			curNode->black^=c1;
 			curNode->black|=c2;
 		}
@@ -406,7 +406,7 @@ void ai3()
 						node *curFlipNode = new node();
 						curFlipNode->parent = curNode;
 						curFlipNode->depth = curFlipNode->parent->depth;
-						curFlipNode->src = ii;//¦sÂ½¥X½Ö ¦Ó¤£¬OÂ½ªº¦ì¸m 
+						curFlipNode->src = ii;//å­˜ç¿»å‡ºèª° è€Œä¸æ˜¯ç¿»çš„ä½ç½® 
 						curFlipNode->dst = -1;
 						memcpy(curFlipNode->piece , curFlipNode->parent->piece , 64);
 						curFlipNode->red=curFlipNode->parent->red;
@@ -431,7 +431,7 @@ void ai3()
 						curFlipNode->MinmaxScore = curFlipNode->h;
 						curFlipNode->parent->child.push_back(curFlipNode);
 						
-						flipi++;//®ÄªG-> 0 1 2 0 5 >> 1 2 5 ¦pªGÀH¾÷¨ì 2 «h¶i¤J child[2] 
+						flipi++;//æ•ˆæœ-> 0 1 2 0 5 >> 1 2 5 å¦‚æœéš¨æ©Ÿåˆ° 2 å‰‡é€²å…¥ child[2] 
 					}
 				}
 				int ii=0;
@@ -454,10 +454,10 @@ void ai3()
 	//FcurNode->UCB = (FcurNode->win / FcurNode->round) + c * sqrt(log10(allRound) / FcurNode->round);
 	//nodes[0].push_back(FcurNode);
 	//stdScore=0;
-	//³Ì«á±qnode[1]¸Ì­±§ä³Ó²v³Ì°ªªº¨Ó·í¦¨¨«¨B
-	for(int curi=1;curi<30000;curi++)//¶]´X½ü 
+	//æœ€å¾Œå¾node[1]è£¡é¢æ‰¾å‹ç‡æœ€é«˜çš„ä¾†ç•¶æˆèµ°æ­¥
+	for(int curi=1;curi<30000;curi++)//è·‘å¹¾è¼ª 
 	{
-		//selection ¶}©l®É©ñ¤J²{¦b½L­± ---------------------------------------------- ±q®Úµ²ÂI¶}©l©¹¤U§äª½¨ì¸­¸`ÂI
+		//selection é–‹å§‹æ™‚æ”¾å…¥ç¾åœ¨ç›¤é¢ ---------------------------------------------- å¾æ ¹çµé»é–‹å§‹å¾€ä¸‹æ‰¾ç›´åˆ°è‘‰ç¯€é»
 		currentParent=FcurNode; 
 		while(!currentParent->leaf)
 		{
@@ -511,11 +511,11 @@ void ai3()
 		}
 		currentParent->leaf= false;
 		//if(currentParent->depth % 2==0 )stdScore=countAva(currentParent->piece_count,currentParent->depth,currentParent->piece); 
-		//expansion ²£¥Í¨«¨B --------------------------------------------------------
+		//expansion ç”¢ç”Ÿèµ°æ­¥ --------------------------------------------------------
 		chess(currentParent->black,currentParent->red,currentParent->piece,currentParent->depth);
-		U32 taEM[30][2];//¦s¥i¦Y¤lªº¤èªk 0 src 1 dst Á×§K³Q©¹¤U·j´M®É¨ê±¼
+		U32 taEM[30][2];//å­˜å¯åƒå­çš„æ–¹æ³• 0 src 1 dst é¿å…è¢«å¾€ä¸‹æœå°‹æ™‚åˆ·æ‰
 		int tAEMi=AEMindex;//alleatmove index
-		U32 taOM[30][2];//¦s¥i²¾°Ê«D¦Y¤lªº¤èªk 0 src 1 dst
+		U32 taOM[30][2];//å­˜å¯ç§»å‹•éåƒå­çš„æ–¹æ³• 0 src 1 dst
 		int tAOMi=AOMindex;//allonlymove index
 		memcpy(taEM,allEatMove,sizeof(taEM));
 		memcpy(taOM,allOnlyMove,sizeof(taOM));
@@ -544,28 +544,28 @@ void ai3()
 					break;
 				}
 			}
-			for(int ii=1;ii<15;ii++){//§äc2 ²M±¼ ³Ñ¾l´Ñ¤l¼Æ§ó§ï 
+			for(int ii=1;ii<15;ii++){//æ‰¾c2 æ¸…æ‰ å‰©é¤˜æ£‹å­æ•¸æ›´æ”¹ 
 				U32 check=curNode->piece[ii]&c2;
 				if(check!=0){
 					c2p=ii;
 					break;
 				}
 			}
-			curNode->piece[c1p]^=c1;//²M°£­ì¦ì¸mc1
-			curNode->piece[c1p]|=c2;//²¾°Ê
-			curNode->piece[0]|=c1;//ªÅ®æ+c1
+			curNode->piece[c1p]^=c1;//æ¸…é™¤åŸä½ç½®c1
+			curNode->piece[c1p]|=c2;//ç§»å‹•
+			curNode->piece[0]|=c1;//ç©ºæ ¼+c1
 			if(c2p!=-1)
 			{
-				curNode->piece[c2p]^=c2;//²M°£­ì¦ì¸mc2
+				curNode->piece[c2p]^=c2;//æ¸…é™¤åŸä½ç½®c2
 				curNode->piece_count[c2p-1]--;
 				if(8>c1p)
-				{//¬õ¦Y¶Â
+				{//ç´…åƒé»‘
 					curNode->red^=c1;
 					curNode->black^=c2;
 					curNode->red|=c2;
 				}
 				else
-				{//¶Â¦Y¬õ 
+				{//é»‘åƒç´… 
 					curNode->black^=c1;
 					curNode->red^=c2;
 					curNode->black|=c2;
@@ -604,17 +604,17 @@ void ai3()
 					break;
 				}
 			}
-			curNode->piece[c1p]^=c1;//²M°£­ì¦ì¸mc1
-			curNode->piece[c1p]|=c2;//²¾°Ê
-			curNode->piece[0]|=c1;//ªÅ®æ+c1
-			curNode->piece[0]^=c2;//²M°£­ì¦ì¸mc2
+			curNode->piece[c1p]^=c1;//æ¸…é™¤åŸä½ç½®c1
+			curNode->piece[c1p]|=c2;//ç§»å‹•
+			curNode->piece[0]|=c1;//ç©ºæ ¼+c1
+			curNode->piece[0]^=c2;//æ¸…é™¤åŸä½ç½®c2
 			if(8>c1p)
-			{//¬õ¦Y¶Â
+			{//ç´…åƒé»‘
 				curNode->red^=c1;
 				curNode->red|=c2;
 			}
 			else
-			{//¶Â¦Y¬õ 
+			{//é»‘åƒç´… 
 				curNode->black^=c1;
 				curNode->black|=c2;
 			}
@@ -652,7 +652,7 @@ void ai3()
 							node *curFlipNode = new node();
 							curFlipNode->parent = curNode;
 							curFlipNode->depth = curFlipNode->parent->depth;
-							curFlipNode->src = ii;//¦sÂ½¥X½Ö ¦Ó¤£¬OÂ½ªº¦ì¸m 
+							curFlipNode->src = ii;//å­˜ç¿»å‡ºèª° è€Œä¸æ˜¯ç¿»çš„ä½ç½® 
 							curFlipNode->dst = -1;
 							memcpy(curFlipNode->piece , curFlipNode->parent->piece , 64);
 							curFlipNode->red=curFlipNode->parent->red;
@@ -677,7 +677,7 @@ void ai3()
 							curFlipNode->MinmaxScore = curFlipNode->h;
 							curFlipNode->parent->child.push_back(curFlipNode);
 							
-							flipi++;//®ÄªG-> 0 1 2 0 5 >> 1 2 5 ¦pªGÀH¾÷¨ì 2 «h¶i¤J child[2] 
+							flipi++;//æ•ˆæœ-> 0 1 2 0 5 >> 1 2 5 å¦‚æœéš¨æ©Ÿåˆ° 2 å‰‡é€²å…¥ child[2] 
 						}
 					}
 					int ii=0;
@@ -717,8 +717,6 @@ void ai3()
 			if (MCSOmega==0) MCSOmega =1;
 			if(wincount > 0)
 			{
-				double testa=MCSa * (-1 + 2 / (1 + exp(-MCSk * ((MCSSimScore - MCSMu)/MCSOmega))));
-				cout<<testa<<endl;
 				wincount = wincount + MCSa * (-1 + 2 / (1 + exp(-MCSk * ((MCSSimScore - MCSMu)/MCSOmega))));
 			}
 			else if(wincount < 0)
@@ -729,7 +727,7 @@ void ai3()
 			currentParent->win += wincount;
 			currentParent->round++;
 		}
-		//propagation §ó·s¯ª¥ı¸`ÂI --------------------------------------------------
+		//propagation æ›´æ–°ç¥–å…ˆç¯€é» --------------------------------------------------
 		node *ancestor=currentParent->parent;
 		while(ancestor!=NULL)
 		{
@@ -768,7 +766,7 @@ void ai3()
 		}
 		//-------------------------------------------------------------------------------2
 	}
-	//¿ï²`«×1¤¤³Ì°ª¤ÀªÌ
+	//é¸æ·±åº¦1ä¸­æœ€é«˜åˆ†è€…
 	double chosen=-1;
 	for(int i=0 ; i<FcurNode->child.size();i++)
 	{
@@ -788,8 +786,8 @@ void ai3()
 double MCSsimulation2(node *SimNode)
 {
 	int PW[300][2];
-	int drawdepth=0;//¬ö¿ıµo¥Í¦Y¤lªºdepth ¶W¹L40¨S¦Y¤l©ÎÂ½´Ñ«h¥­¤â 
-	node *curSimNode=new node();//¤£¥h§ïÅÜ­ì¥»½L­±
+	int drawdepth=0;//ç´€éŒ„ç™¼ç”Ÿåƒå­çš„depth è¶…é40æ²’åƒå­æˆ–ç¿»æ£‹å‰‡å¹³æ‰‹ 
+	node *curSimNode=new node();//ä¸å»æ”¹è®ŠåŸæœ¬ç›¤é¢
 	curSimNode->depth = SimNode->depth;
 	drawdepth = curSimNode->depth;
 	memcpy(curSimNode->piece ,SimNode->piece ,64 );
@@ -798,7 +796,7 @@ double MCSsimulation2(node *SimNode)
 	curSimNode->black=SimNode->black;
 	curSimNode->red=SimNode->red;
 	MCSdepth = curSimNode->depth; 
-	//-------»s§@Â½´Ñªí
+	//-------è£½ä½œç¿»æ£‹è¡¨
 	int flip1[32];
 	int flip1i=0;
 	for(int i=0;i<14;i++)
@@ -829,7 +827,7 @@ double MCSsimulation2(node *SimNode)
 			}
 		} 
 		if((curSimNode->red==0)&&curSimNode->piece[15]==0)
-		{//¬õ±Ñ 
+		{//ç´…æ•— 
 			if(color == 0) 
 			{
 				MCSSimScore = MCSCount(curSimNode->piece_count);
@@ -842,7 +840,7 @@ double MCSsimulation2(node *SimNode)
 			}
 		}
 		if((curSimNode->black==0)&&(curSimNode->piece[15])==0)
-		{//¶Â±Ñ 
+		{//é»‘æ•— 
 			if(color == 1) 
 			{
 				MCSSimScore = MCSCount(curSimNode->piece_count);
@@ -859,16 +857,16 @@ double MCSsimulation2(node *SimNode)
 			MCSSimScore = MCSCount(curSimNode->piece_count);
 			return 0.5;
 		}
-		//-------------------------------------------------------¯à¦Y¥ı¦Y ¦Y³Ì¤j¤l 
+		//-------------------------------------------------------èƒ½åƒå…ˆåƒ åƒæœ€å¤§å­ 
 		int bestway=-1;
 		int besteat=-1;
-		for(int i=0; i<AEMindex ;i++)//i©Ò¦³³Q¦Y¤l 
+		for(int i=0; i<AEMindex ;i++)//iæ‰€æœ‰è¢«åƒå­ 
 		{
 			if((color + curSimNode->depth) % 2 == 0)
 			{
-				for(int ii=8; ii<15; ii++)//ii§ä¨º­Ó¦ì¸m¬°­ş­Ó¤l
+				for(int ii=8; ii<15; ii++)//iiæ‰¾é‚£å€‹ä½ç½®ç‚ºå“ªå€‹å­
 				{
-					U32 eaten=1<<allEatMove[i][1];//allEatMove[i][1]°¨¤W¥i¯à³Q¦Yªº¤lªº¦ì¸m 
+					U32 eaten=1<<allEatMove[i][1];//allEatMove[i][1]é¦¬ä¸Šå¯èƒ½è¢«åƒçš„å­çš„ä½ç½® 
 					if((curSimNode->piece[ii] & eaten)!=0)
 					{
 						if(piPw[ii-1]>besteat)
@@ -883,9 +881,9 @@ double MCSsimulation2(node *SimNode)
 			}
 			else if((color + curSimNode->depth) % 2 == 1)
 			{
-				for(int ii=1; ii<8; ii++)//ii§ä¨º­Ó¦ì¸m¬°­ş­Ó¤l
+				for(int ii=1; ii<8; ii++)//iiæ‰¾é‚£å€‹ä½ç½®ç‚ºå“ªå€‹å­
 				{
-					U32 eaten=1<<allEatMove[i][1];//allEatMove[i][1]°¨¤W¥i¯à³Q¦Yªº¤lªº¦ì¸m 
+					U32 eaten=1<<allEatMove[i][1];//allEatMove[i][1]é¦¬ä¸Šå¯èƒ½è¢«åƒçš„å­çš„ä½ç½® 
 					if((curSimNode->piece[ii] & eaten)!=0)
 					{
 						if(piPw[ii-1]>besteat)
@@ -900,16 +898,16 @@ double MCSsimulation2(node *SimNode)
 			}
 			if(besteat == -1) cout<<" err0901 "<<color<<" "<<curSimNode->depth<<endl;
 		}
-		//-------------------------------------------------------¯à¶]¥ı¶]
+		//-------------------------------------------------------èƒ½è·‘å…ˆè·‘
 		if(bestway == -1)
 		{
-			for(int i=0; i<EAEMindex ;i++)//i©Ò¦³³Q¦Y¤l 
+			for(int i=0; i<EAEMindex ;i++)//iæ‰€æœ‰è¢«åƒå­ 
 			{
 				if((color + curSimNode->depth) % 2 == 1)
 				{
-					for(int ii=8; ii<15; ii++)//ii§ä¨º­Ó¦ì¸m¬°­ş­Ó¤l
+					for(int ii=8; ii<15; ii++)//iiæ‰¾é‚£å€‹ä½ç½®ç‚ºå“ªå€‹å­
 					{
-						U32 eaten=1<<EallEatMove[i][1];//allEatMove[i][1]°¨¤W¥i¯à³Q¦Yªº¤lªº¦ì¸m 
+						U32 eaten=1<<EallEatMove[i][1];//allEatMove[i][1]é¦¬ä¸Šå¯èƒ½è¢«åƒçš„å­çš„ä½ç½® 
 						if((curSimNode->piece[ii] & eaten)!=0)
 						{
 							if(piPw[ii-1]>besteat)
@@ -923,9 +921,9 @@ double MCSsimulation2(node *SimNode)
 				}
 				else if((color + curSimNode->depth) % 2 == 0)
 				{
-					for(int ii=1; ii<8; ii++)//ii§ä¨º­Ó¦ì¸m¬°­ş­Ó¤l
+					for(int ii=1; ii<8; ii++)//iiæ‰¾é‚£å€‹ä½ç½®ç‚ºå“ªå€‹å­
 					{
-						U32 eaten=1<<EallEatMove[i][1];//allEatMove[i][1]°¨¤W¥i¯à³Q¦Yªº¤lªº¦ì¸m 
+						U32 eaten=1<<EallEatMove[i][1];//allEatMove[i][1]é¦¬ä¸Šå¯èƒ½è¢«åƒçš„å­çš„ä½ç½® 
 						if((curSimNode->piece[ii] & eaten)!=0)
 						{
 							if(piPw[ii-1]>besteat)
@@ -956,7 +954,7 @@ double MCSsimulation2(node *SimNode)
 					besteat = -1;
 				}
 			}
-			//-------------------------------------------------------¤£¯à¶]¦Y «hÂ½¤l»P¨«¨B 
+			//-------------------------------------------------------ä¸èƒ½è·‘åƒ å‰‡ç¿»å­èˆ‡èµ°æ­¥ 
 			if(bestway == -1)
 			{
 				int moveWay[32];
@@ -973,7 +971,7 @@ double MCSsimulation2(node *SimNode)
 					}
 				}
 				int movernd = rand() % (movei + AOMindex);
-				if(movernd >= movei)//¨«¨B 
+				if(movernd >= movei)//èµ°æ­¥ 
 				{
 					movernd -= movei;
 					int c1p=-1;
@@ -986,22 +984,22 @@ double MCSsimulation2(node *SimNode)
 							break;
 						}
 					}
-					curSimNode->piece[c1p]^=c1;//²M°£­ì¦ì¸mc1
-					curSimNode->piece[c1p]|=c2;//²¾°Ê
-					curSimNode->piece[0]|=c1;//ªÅ®æ+c1
-					curSimNode->piece[0]^=c2;//²M°£­ì¦ì¸mc2
+					curSimNode->piece[c1p]^=c1;//æ¸…é™¤åŸä½ç½®c1
+					curSimNode->piece[c1p]|=c2;//ç§»å‹•
+					curSimNode->piece[0]|=c1;//ç©ºæ ¼+c1
+					curSimNode->piece[0]^=c2;//æ¸…é™¤åŸä½ç½®c2
 					if(8>c1p)
-					{//¬õ
+					{//ç´…
 						curSimNode->red^=c1;
 						curSimNode->red|=c2;
 					}
 					else
-					{//¶Â
+					{//é»‘
 						curSimNode->black^=c1;
 						curSimNode->black|=c2;
 					}
 				}
-				else//Â½´Ñ
+				else//ç¿»æ£‹
 				{
 					drawdepth = curSimNode->depth;
 					int fliprnd = rand() % flip1i;
@@ -1027,17 +1025,17 @@ double MCSsimulation2(node *SimNode)
 						break;
 					}
 				}
-				curSimNode->piece[c1p]^=c1;//²M°£­ì¦ì¸mc1
-				curSimNode->piece[c1p]|=c2;//²¾°Ê
-				curSimNode->piece[0]|=c1;//ªÅ®æ+c1
-				curSimNode->piece[0]^=c2;//²M°£­ì¦ì¸mc2
+				curSimNode->piece[c1p]^=c1;//æ¸…é™¤åŸä½ç½®c1
+				curSimNode->piece[c1p]|=c2;//ç§»å‹•
+				curSimNode->piece[0]|=c1;//ç©ºæ ¼+c1
+				curSimNode->piece[0]^=c2;//æ¸…é™¤åŸä½ç½®c2
 				if(8>c1p)
-				{//¬õ
+				{//ç´…
 					curSimNode->red^=c1;
 					curSimNode->red|=c2;
 				}
 				else
-				{//¶Â
+				{//é»‘
 					curSimNode->black^=c1;
 					curSimNode->black|=c2;
 				}
@@ -1056,26 +1054,26 @@ double MCSsimulation2(node *SimNode)
 					break;
 				}
 			}
-			for(int ii=1;ii<15;ii++){//§äc2 ²M±¼ ³Ñ¾l´Ñ¤l¼Æ§ó§ï 
+			for(int ii=1;ii<15;ii++){//æ‰¾c2 æ¸…æ‰ å‰©é¤˜æ£‹å­æ•¸æ›´æ”¹ 
 				U32 check=curSimNode->piece[ii]&c2;
 				if(check!=0){
 					c2p=ii;
 					break;
 				}
 			}
-			curSimNode->piece[c1p]^=c1;//²M°£­ì¦ì¸mc1
-			curSimNode->piece[c1p]|=c2;//²¾°Ê
-			curSimNode->piece[0]|=c1;//ªÅ®æ+c1
-			curSimNode->piece[c2p]^=c2;//²M°£­ì¦ì¸mc2
+			curSimNode->piece[c1p]^=c1;//æ¸…é™¤åŸä½ç½®c1
+			curSimNode->piece[c1p]|=c2;//ç§»å‹•
+			curSimNode->piece[0]|=c1;//ç©ºæ ¼+c1
+			curSimNode->piece[c2p]^=c2;//æ¸…é™¤åŸä½ç½®c2
 			curSimNode->piece_count[c2p-1]--;
 			if(8>c1p)
-			{//¬õ¦Y¶Â
+			{//ç´…åƒé»‘
 				curSimNode->red^=c1;
 				curSimNode->black^=c2;
 				curSimNode->red|=c2;
 			}
 			else
-			{//¶Â¦Y¬õ 
+			{//é»‘åƒç´… 
 				curSimNode->black^=c1;
 				curSimNode->red^=c2;
 				curSimNode->black|=c2;
@@ -1089,7 +1087,7 @@ double MCSsimulation2(node *SimNode)
 
 void chess(U32 tblack,U32 tred,U32 tpiece[16],int deep) //deep+color%2 0red 1black first 
 {
-	U32 dest;//¥i¥H¦Y¤lªº¦æ°Ê
+	U32 dest;//å¯ä»¥åƒå­çš„è¡Œå‹•
 	AEMindex=0;
 	AOMindex=0;
 	EAEMindex=0;
@@ -1099,31 +1097,31 @@ void chess(U32 tblack,U32 tred,U32 tpiece[16],int deep) //deep+color%2 0red 1bla
 	int ssrc=0;
 	//cout<<"-------------------------"<<endl;
 	int check=(color+deep)%2;//0red 1black
-	if(check==0){//¬õ 
+	if(check==0){//ç´… 
 		//cout<<"Ours available eat:"<<endl;
-		for(int i=1; i<8; i++){ //1~7 ¬°«Ó~§L,src ¬°´Ñ¤l°_ÂI,dest ¬°²×ÂI¡C  ¥ıºâ§Ú¤è 
-			U32 p = tpiece[i]; //¨ú±o´Ñ¤l¦ì¸m
-			while(p){ //±N¬õ¦â 1~7 ¸¹ªº¤l³£·j´M¤@¹M
-				U32 mask = LS1B(p); //¦pªG¸Ó´Ñ¤l¦b¦h­Ó¦ì¸m,¥ı¨ú§C¦ì¤¸ªº¦ì¸m¡C
-				p ^= mask; //°£¥h¦ì©ó³Ì§C¦ì¤¸ªº¸Ó§LºØ
-				ssrc = GetIndex(mask); //±N³Ì§C¦ì¤¸ªº§LºØ³]¬°¨«¨B°_ÂI
-				if(i==1) //«Ó,©P³ò¨ò(14)¥H¥~ªº¶Â¤l³£¥i¥H¦Y¡C
+		for(int i=1; i<8; i++){ //1~7 ç‚ºå¸¥~å…µ,src ç‚ºæ£‹å­èµ·é»,dest ç‚ºçµ‚é»ã€‚  å…ˆç®—æˆ‘æ–¹ 
+			U32 p = tpiece[i]; //å–å¾—æ£‹å­ä½ç½®
+			while(p){ //å°‡ç´…è‰² 1~7 è™Ÿçš„å­éƒ½æœå°‹ä¸€é
+				U32 mask = LS1B(p); //å¦‚æœè©²æ£‹å­åœ¨å¤šå€‹ä½ç½®,å…ˆå–ä½ä½å…ƒçš„ä½ç½®ã€‚
+				p ^= mask; //é™¤å»ä½æ–¼æœ€ä½ä½å…ƒçš„è©²å…µç¨®
+				ssrc = GetIndex(mask); //å°‡æœ€ä½ä½å…ƒçš„å…µç¨®è¨­ç‚ºèµ°æ­¥èµ·é»
+				if(i==1) //å¸¥,å‘¨åœå’(14)ä»¥å¤–çš„é»‘å­éƒ½å¯ä»¥åƒã€‚
 					dest = pMoves[ssrc] & ( tblack ^ tpiece[14] );
-				else if(i==2) //¥K,©P³ò±N(8)¥H¥~ªº¶Â¤l³£¥i¥H¦Y¡C
+				else if(i==2) //ä»•,å‘¨åœå°‡(8)ä»¥å¤–çš„é»‘å­éƒ½å¯ä»¥åƒã€‚
 					dest = pMoves[ssrc] & ( tblack ^ tpiece[8] );
-				else if(i==3) //¬Û,©P³ò±N¡B¤h¥H¥~ªº¶Â¤l³£¥i¥H¦Y¡C	
+				else if(i==3) //ç›¸,å‘¨åœå°‡ã€å£«ä»¥å¤–çš„é»‘å­éƒ½å¯ä»¥åƒã€‚	
 					dest = pMoves[ssrc] & ( tblack ^ tpiece[8] ^ tpiece[9] );
-				else if(i==4) //?,¥u¯à¦Y¨®(11)¡B°¨¡B¬¶¡B¨ò¡C
+				else if(i==4) //?,åªèƒ½åƒè»Š(11)ã€é¦¬ã€ç‚®ã€å’ã€‚
 					dest = pMoves[ssrc] & (tpiece[11] | tpiece[12] | tpiece[13] | tpiece[14] );	
-				else if(i==5) //ØX,¥u¯à¦Y°¨(12)¡B¬¶¡B¨ò¡C
+				else if(i==5) //å‚Œ,åªèƒ½åƒé¦¬(12)ã€ç‚®ã€å’ã€‚
 					dest = pMoves[ssrc] & (tpiece[12] | tpiece[13] | tpiece[14] );
-				else if(i==6) //¬¶,¯S®í³B²z¡C
+				else if(i==6) //ç‚®,ç‰¹æ®Šè™•ç†ã€‚
 					dest = CGen(ssrc,toccupied) & tblack;
-				else if(i==7) //§L,¥u¯à¦Y±N(8)¡B¨ò(14)¡C
+				else if(i==7) //å…µ,åªèƒ½åƒå°‡(8)ã€å’(14)ã€‚
 					dest = pMoves[ssrc] & (tpiece[8] | tpiece[14]);
 				else
 					dest = 0;
-				while(dest){ //¦pªG dest ¦³¦h­Ó¦ì¸mªº¸Ü,¤À¶}¦s°_¨Ó¡C
+				while(dest){ //å¦‚æœ dest æœ‰å¤šå€‹ä½ç½®çš„è©±,åˆ†é–‹å­˜èµ·ä¾†ã€‚
 					U32 mask2 = LS1B(dest);
 					dest ^= mask2;
 					U32 result = GetIndex(mask2);
@@ -1135,14 +1133,14 @@ void chess(U32 tblack,U32 tred,U32 tpiece[16],int deep) //deep+color%2 0red 1bla
 			}
 		}
 		//cout<<"Ours available move:"<<endl;
-		for(int i=1; i<8; i++){ //¬õ¤è¯Â²¾°Ê
-			U32 p = tpiece[i]; //¨ú±o´Ñ¤l¦ì¸m
-			while(p){ //±N¬õ¦â 1~7 ¸¹ªº¤l³£·j´M¤@¹M
-				U32 mask = LS1B(p); //¦pªG¸Ó´Ñ¤l¦b¦h­Ó¦ì¸m,¥ı¨ú§C¦ì¤¸ªº¦ì¸m¡C
-				p ^= mask; //°£¥h¦ì©ó³Ì§C¦ì¤¸ªº¸Ó§LºØ
-				ssrc = GetIndex(mask); //±N³Ì§C¦ì¤¸ªº§LºØ³]¬°¨«¨B°_ÂI
-					dest = pMoves[ssrc] & tpiece[0];//¥u¨«ªÅ®æ
-				while(dest){ //¦pªG dest ¦³¦h­Ó¦ì¸mªº¸Ü,¤À¶}¦s°_¨Ó¡C
+		for(int i=1; i<8; i++){ //ç´…æ–¹ç´”ç§»å‹•
+			U32 p = tpiece[i]; //å–å¾—æ£‹å­ä½ç½®
+			while(p){ //å°‡ç´…è‰² 1~7 è™Ÿçš„å­éƒ½æœå°‹ä¸€é
+				U32 mask = LS1B(p); //å¦‚æœè©²æ£‹å­åœ¨å¤šå€‹ä½ç½®,å…ˆå–ä½ä½å…ƒçš„ä½ç½®ã€‚
+				p ^= mask; //é™¤å»ä½æ–¼æœ€ä½ä½å…ƒçš„è©²å…µç¨®
+				ssrc = GetIndex(mask); //å°‡æœ€ä½ä½å…ƒçš„å…µç¨®è¨­ç‚ºèµ°æ­¥èµ·é»
+					dest = pMoves[ssrc] & tpiece[0];//åªèµ°ç©ºæ ¼
+				while(dest){ //å¦‚æœ dest æœ‰å¤šå€‹ä½ç½®çš„è©±,åˆ†é–‹å­˜èµ·ä¾†ã€‚
 					U32 mask2 = LS1B(dest);
 					dest ^= mask2;
 					U32 result = GetIndex(mask2);
@@ -1154,7 +1152,7 @@ void chess(U32 tblack,U32 tred,U32 tpiece[16],int deep) //deep+color%2 0red 1bla
 			}
 		}
 		//cout<<"Their available eat:"<<endl;
-		for(int i=8; i<15; i++){ //¦Aºâ¹ï¤â¦æ°Ê 
+		for(int i=8; i<15; i++){ //å†ç®—å°æ‰‹è¡Œå‹• 
 			U32 p = tpiece[i]; 
 			while(p){ 
 				U32 mask = LS1B(p); 
@@ -1162,21 +1160,21 @@ void chess(U32 tblack,U32 tred,U32 tpiece[16],int deep) //deep+color%2 0red 1bla
 				ssrc = GetIndex(mask); 
 				if(i==8) 
 					dest = pMoves[ssrc] & ( tred ^ tpiece[7] );
-				else if(i==9) //¥K,©P³ò±N(8)¥H¥~ªº¶Â¤l³£¥i¥H¦Y¡C
+				else if(i==9) //ä»•,å‘¨åœå°‡(8)ä»¥å¤–çš„é»‘å­éƒ½å¯ä»¥åƒã€‚
 					dest = pMoves[ssrc] & ( tred ^ tpiece[1] );
-				else if(i==10) //¬Û,©P³ò±N¡B¤h¥H¥~ªº¶Â¤l³£¥i¥H¦Y¡C	
+				else if(i==10) //ç›¸,å‘¨åœå°‡ã€å£«ä»¥å¤–çš„é»‘å­éƒ½å¯ä»¥åƒã€‚	
 					dest = pMoves[ssrc] & ( tred ^ tpiece[1] ^ tpiece[2] );
-				else if(i==11) //?,¥u¯à¦Y¨®(11)¡B°¨¡B¬¶¡B¨ò¡C
+				else if(i==11) //?,åªèƒ½åƒè»Š(11)ã€é¦¬ã€ç‚®ã€å’ã€‚
 					dest = pMoves[ssrc] & (tpiece[4] | tpiece[5] | tpiece[6] | tpiece[7] );	
-				else if(i==12) //ØX,¥u¯à¦Y°¨(12)¡B¬¶¡B¨ò¡C
+				else if(i==12) //å‚Œ,åªèƒ½åƒé¦¬(12)ã€ç‚®ã€å’ã€‚
 					dest = pMoves[ssrc] & (tpiece[5] | tpiece[6] | tpiece[7] );
-				else if(i==13) //¬¶,¯S®í³B²z¡C
+				else if(i==13) //ç‚®,ç‰¹æ®Šè™•ç†ã€‚
 					dest = CGen(ssrc,toccupied) & tred;
-				else if(i==14) //§L,¥u¯à¦Y±N¡B¨ò(14)¡C
+				else if(i==14) //å…µ,åªèƒ½åƒå°‡ã€å’(14)ã€‚
 					dest = pMoves[ssrc] & (tpiece[1] | tpiece[7]);
 				else
 				dest = 0;
-					while(dest){ //¹ï¤â¦æ°Ê¦s¤JEallEatMove 
+					while(dest){ //å°æ‰‹è¡Œå‹•å­˜å…¥EallEatMove 
 					U32 mask2 = LS1B(dest);
 					dest ^= mask2;
 					U32 result = GetIndex(mask2);
@@ -1188,14 +1186,14 @@ void chess(U32 tblack,U32 tred,U32 tpiece[16],int deep) //deep+color%2 0red 1bla
 			}
 		}
 		//cout<<"Their available move:"<<endl;
-		for(int i=8; i<15; i++){ //¹ï¤â¯Â²¾°Ê 
-			U32 p = tpiece[i]; //¨ú±o´Ñ¤l¦ì¸m
-			while(p){ //±N¶Â¦â 8~14 ¸¹ªº¤l³£·j´M¤@¹M
-				U32 mask = LS1B(p); //¦pªG¸Ó´Ñ¤l¦b¦h­Ó¦ì¸m,¥ı¨ú§C¦ì¤¸ªº¦ì¸m¡C
-				p ^= mask; //°£¥h¦ì©ó³Ì§C¦ì¤¸ªº¸Ó§LºØ
-				ssrc = GetIndex(mask); //±N³Ì§C¦ì¤¸ªº§LºØ³]¬°¨«¨B°_ÂI
-					dest = pMoves[ssrc] & tpiece[0];//¥u¨«ªÅ®æ
-				while(dest){ //¦pªG dest ¦³¦h­Ó¦ì¸mªº¸Ü,¤À¶}¦s°_¨Ó¡C
+		for(int i=8; i<15; i++){ //å°æ‰‹ç´”ç§»å‹• 
+			U32 p = tpiece[i]; //å–å¾—æ£‹å­ä½ç½®
+			while(p){ //å°‡é»‘è‰² 8~14 è™Ÿçš„å­éƒ½æœå°‹ä¸€é
+				U32 mask = LS1B(p); //å¦‚æœè©²æ£‹å­åœ¨å¤šå€‹ä½ç½®,å…ˆå–ä½ä½å…ƒçš„ä½ç½®ã€‚
+				p ^= mask; //é™¤å»ä½æ–¼æœ€ä½ä½å…ƒçš„è©²å…µç¨®
+				ssrc = GetIndex(mask); //å°‡æœ€ä½ä½å…ƒçš„å…µç¨®è¨­ç‚ºèµ°æ­¥èµ·é»
+					dest = pMoves[ssrc] & tpiece[0];//åªèµ°ç©ºæ ¼
+				while(dest){ //å¦‚æœ dest æœ‰å¤šå€‹ä½ç½®çš„è©±,åˆ†é–‹å­˜èµ·ä¾†ã€‚
 					U32 mask2 = LS1B(dest);
 					dest ^= mask2;
 					U32 result = GetIndex(mask2);
@@ -1207,31 +1205,31 @@ void chess(U32 tblack,U32 tred,U32 tpiece[16],int deep) //deep+color%2 0red 1bla
 			}
 		}
 	}
-	else{//¶Â¤è²¾°Ê 
+	else{//é»‘æ–¹ç§»å‹• 
 		//cout<<"Our available eat:"<<endl;
-		for(int i=8; i<15; i++){ //1~7 ¬°«Ó~§L,src ¬°´Ñ¤l°_ÂI,dest ¬°²×ÂI¡C
-			U32 p = tpiece[i]; //¨ú±o´Ñ¤l¦ì¸m
-			while(p){ //±N¶Â¦â 1~7 ¸¹ªº¤l³£·j´M¤@¹M
-				U32 mask = LS1B(p); //¦pªG¸Ó´Ñ¤l¦b¦h­Ó¦ì¸m,¥ı¨ú§C¦ì¤¸ªº¦ì¸m¡C
-				p ^= mask; //°£¥h¦ì©ó³Ì§C¦ì¤¸ªº¸Ó§LºØ
-				ssrc = GetIndex(mask); //±N³Ì§C¦ì¤¸ªº§LºØ³]¬°¨«¨B°_ÂI
-				if(i==8) //«Ó,©P³ò¨ò(14)¥H¥~ªº¶Â¤l³£¥i¥H¦Y¡C
+		for(int i=8; i<15; i++){ //1~7 ç‚ºå¸¥~å…µ,src ç‚ºæ£‹å­èµ·é»,dest ç‚ºçµ‚é»ã€‚
+			U32 p = tpiece[i]; //å–å¾—æ£‹å­ä½ç½®
+			while(p){ //å°‡é»‘è‰² 1~7 è™Ÿçš„å­éƒ½æœå°‹ä¸€é
+				U32 mask = LS1B(p); //å¦‚æœè©²æ£‹å­åœ¨å¤šå€‹ä½ç½®,å…ˆå–ä½ä½å…ƒçš„ä½ç½®ã€‚
+				p ^= mask; //é™¤å»ä½æ–¼æœ€ä½ä½å…ƒçš„è©²å…µç¨®
+				ssrc = GetIndex(mask); //å°‡æœ€ä½ä½å…ƒçš„å…µç¨®è¨­ç‚ºèµ°æ­¥èµ·é»
+				if(i==8) //å¸¥,å‘¨åœå’(14)ä»¥å¤–çš„é»‘å­éƒ½å¯ä»¥åƒã€‚
 					dest = pMoves[ssrc] & ( tred ^ tpiece[7] );
-				else if(i==9) //¥K,©P³ò±N(8)¥H¥~ªº¶Â¤l³£¥i¥H¦Y¡C
+				else if(i==9) //ä»•,å‘¨åœå°‡(8)ä»¥å¤–çš„é»‘å­éƒ½å¯ä»¥åƒã€‚
 					dest = pMoves[ssrc] & ( tred ^ tpiece[1] );
-				else if(i==10) //¬Û,©P³ò±N¡B¤h¥H¥~ªº¶Â¤l³£¥i¥H¦Y¡C	
+				else if(i==10) //ç›¸,å‘¨åœå°‡ã€å£«ä»¥å¤–çš„é»‘å­éƒ½å¯ä»¥åƒã€‚	
 					dest = pMoves[ssrc] & ( tred ^ tpiece[1] ^ tpiece[2] );
-				else if(i==11) //?,¥u¯à¦Y¨®(11)¡B°¨¡B¬¶¡B¨ò¡C
+				else if(i==11) //?,åªèƒ½åƒè»Š(11)ã€é¦¬ã€ç‚®ã€å’ã€‚
 					dest = pMoves[ssrc] & (tpiece[4] | tpiece[5] | tpiece[6] | tpiece[7] );	
-				else if(i==12) //ØX,¥u¯à¦Y°¨(12)¡B¬¶¡B¨ò¡C
+				else if(i==12) //å‚Œ,åªèƒ½åƒé¦¬(12)ã€ç‚®ã€å’ã€‚
 					dest = pMoves[ssrc] & (tpiece[5] | tpiece[6] | tpiece[7] );
-				else if(i==13) //¬¶,¯S®í³B²z¡C
+				else if(i==13) //ç‚®,ç‰¹æ®Šè™•ç†ã€‚
 					dest = CGen(ssrc,toccupied) & tred;
-				else if(i==14) //§L,¥u¯à¦Y±N¡B¨ò(14)¡C
+				else if(i==14) //å…µ,åªèƒ½åƒå°‡ã€å’(14)ã€‚
 					dest = pMoves[ssrc] & (tpiece[1] | tpiece[7]);
 				else
 				dest = 0;
-					while(dest){ //¦pªG dest ¦³¦h­Ó¦ì¸mªº¸Ü,¤À¶}¦s°_¨Ó¡C
+					while(dest){ //å¦‚æœ dest æœ‰å¤šå€‹ä½ç½®çš„è©±,åˆ†é–‹å­˜èµ·ä¾†ã€‚
 					U32 mask2 = LS1B(dest);
 					dest ^= mask2;
 					U32 result = GetIndex(mask2);
@@ -1243,14 +1241,14 @@ void chess(U32 tblack,U32 tred,U32 tpiece[16],int deep) //deep+color%2 0red 1bla
 			}
 		}
 		//cout<<"Our available move:"<<endl;
-		for(int i=8; i<15; i++){ //¶Â¤è¯Â²¾°Ê
-			U32 p = tpiece[i]; //¨ú±o´Ñ¤l¦ì¸m
-			while(p){ //±N¶Â¦â 8~14 ¸¹ªº¤l³£·j´M¤@¹M
-				U32 mask = LS1B(p); //¦pªG¸Ó´Ñ¤l¦b¦h­Ó¦ì¸m,¥ı¨ú§C¦ì¤¸ªº¦ì¸m¡C
-				p ^= mask; //°£¥h¦ì©ó³Ì§C¦ì¤¸ªº¸Ó§LºØ
-				ssrc = GetIndex(mask); //±N³Ì§C¦ì¤¸ªº§LºØ³]¬°¨«¨B°_ÂI
-					dest = pMoves[ssrc] & tpiece[0];//¥u¨«ªÅ®æ
-				while(dest){ //¦pªG dest ¦³¦h­Ó¦ì¸mªº¸Ü,¤À¶}¦s°_¨Ó¡C
+		for(int i=8; i<15; i++){ //é»‘æ–¹ç´”ç§»å‹•
+			U32 p = tpiece[i]; //å–å¾—æ£‹å­ä½ç½®
+			while(p){ //å°‡é»‘è‰² 8~14 è™Ÿçš„å­éƒ½æœå°‹ä¸€é
+				U32 mask = LS1B(p); //å¦‚æœè©²æ£‹å­åœ¨å¤šå€‹ä½ç½®,å…ˆå–ä½ä½å…ƒçš„ä½ç½®ã€‚
+				p ^= mask; //é™¤å»ä½æ–¼æœ€ä½ä½å…ƒçš„è©²å…µç¨®
+				ssrc = GetIndex(mask); //å°‡æœ€ä½ä½å…ƒçš„å…µç¨®è¨­ç‚ºèµ°æ­¥èµ·é»
+					dest = pMoves[ssrc] & tpiece[0];//åªèµ°ç©ºæ ¼
+				while(dest){ //å¦‚æœ dest æœ‰å¤šå€‹ä½ç½®çš„è©±,åˆ†é–‹å­˜èµ·ä¾†ã€‚
 					U32 mask2 = LS1B(dest);
 					dest ^= mask2;
 					U32 result = GetIndex(mask2);
@@ -1262,29 +1260,29 @@ void chess(U32 tblack,U32 tred,U32 tpiece[16],int deep) //deep+color%2 0red 1bla
 			}
 		}
 		//cout<<"Their available eat:"<<endl;
-		for(int i=1; i<8; i++){ //­pºâ¼Ä¤è²¾°Ê 
-			U32 p = tpiece[i]; //¨ú±o´Ñ¤l¦ì¸m
-			while(p){ //±N¬õ¦â 1~7 ¸¹ªº¤l³£·j´M¤@¹M
-				U32 mask = LS1B(p); //¦pªG¸Ó´Ñ¤l¦b¦h­Ó¦ì¸m,¥ı¨ú§C¦ì¤¸ªº¦ì¸m¡C
-				p ^= mask; //°£¥h¦ì©ó³Ì§C¦ì¤¸ªº¸Ó§LºØ
-				ssrc = GetIndex(mask); //±N³Ì§C¦ì¤¸ªº§LºØ³]¬°¨«¨B°_ÂI
-				if(i==1) //«Ó,©P³ò¨ò(14)¥H¥~ªº¶Â¤l³£¥i¥H¦Y¡C
+		for(int i=1; i<8; i++){ //è¨ˆç®—æ•µæ–¹ç§»å‹• 
+			U32 p = tpiece[i]; //å–å¾—æ£‹å­ä½ç½®
+			while(p){ //å°‡ç´…è‰² 1~7 è™Ÿçš„å­éƒ½æœå°‹ä¸€é
+				U32 mask = LS1B(p); //å¦‚æœè©²æ£‹å­åœ¨å¤šå€‹ä½ç½®,å…ˆå–ä½ä½å…ƒçš„ä½ç½®ã€‚
+				p ^= mask; //é™¤å»ä½æ–¼æœ€ä½ä½å…ƒçš„è©²å…µç¨®
+				ssrc = GetIndex(mask); //å°‡æœ€ä½ä½å…ƒçš„å…µç¨®è¨­ç‚ºèµ°æ­¥èµ·é»
+				if(i==1) //å¸¥,å‘¨åœå’(14)ä»¥å¤–çš„é»‘å­éƒ½å¯ä»¥åƒã€‚
 					dest = pMoves[ssrc] & ( tblack ^ tpiece[14] );
-				else if(i==2) //¥K,©P³ò±N(8)¥H¥~ªº¶Â¤l³£¥i¥H¦Y¡C
+				else if(i==2) //ä»•,å‘¨åœå°‡(8)ä»¥å¤–çš„é»‘å­éƒ½å¯ä»¥åƒã€‚
 					dest = pMoves[ssrc] & ( tblack ^ tpiece[8] );
-				else if(i==3) //¬Û,©P³ò±N¡B¤h¥H¥~ªº¶Â¤l³£¥i¥H¦Y¡C	
+				else if(i==3) //ç›¸,å‘¨åœå°‡ã€å£«ä»¥å¤–çš„é»‘å­éƒ½å¯ä»¥åƒã€‚	
 					dest = pMoves[ssrc] & ( tblack ^ tpiece[8] ^ tpiece[9] );
-				else if(i==4) //?,¥u¯à¦Y¨®(11)¡B°¨¡B¬¶¡B¨ò¡C
+				else if(i==4) //?,åªèƒ½åƒè»Š(11)ã€é¦¬ã€ç‚®ã€å’ã€‚
 						dest = pMoves[ssrc] & (tpiece[11] | tpiece[12] | tpiece[13] | tpiece[14] );	
-				else if(i==5) //ØX,¥u¯à¦Y°¨(12)¡B¬¶¡B¨ò¡C
+				else if(i==5) //å‚Œ,åªèƒ½åƒé¦¬(12)ã€ç‚®ã€å’ã€‚
 					dest = pMoves[ssrc] & (tpiece[12] | tpiece[13] | tpiece[14] );
-				else if(i==6) //¬¶,¯S®í³B²z¡C
+				else if(i==6) //ç‚®,ç‰¹æ®Šè™•ç†ã€‚
 					dest = CGen(ssrc,toccupied) & tblack;
-				else if(i==7) //§L,¥u¯à¦Y±N(8)¡B¨ò(14)¡C
+				else if(i==7) //å…µ,åªèƒ½åƒå°‡(8)ã€å’(14)ã€‚
 					dest = pMoves[ssrc] & (tpiece[8] | tpiece[14]);
 				else
 				dest = 0;
-					while(dest){ //¦pªG dest ¦³¦h­Ó¦ì¸mªº¸Ü,¤À¶}¦s°_¨Ó¡C
+					while(dest){ //å¦‚æœ dest æœ‰å¤šå€‹ä½ç½®çš„è©±,åˆ†é–‹å­˜èµ·ä¾†ã€‚
 					U32 mask2 = LS1B(dest);
 					dest ^= mask2;
 					U32 result = GetIndex(mask2);
@@ -1296,14 +1294,14 @@ void chess(U32 tblack,U32 tred,U32 tpiece[16],int deep) //deep+color%2 0red 1bla
 			}
 		}
 		//cout<<"Their available move:"<<endl;
-		for(int i=1; i<8; i++){ //¬õ¤è¯Â²¾°Ê
-			U32 p = tpiece[i]; //¨ú±o´Ñ¤l¦ì¸m
-			while(p){ //±N¬õ¦â 1~7 ¸¹ªº¤l³£·j´M¤@¹M
-				U32 mask = LS1B(p); //¦pªG¸Ó´Ñ¤l¦b¦h­Ó¦ì¸m,¥ı¨ú§C¦ì¤¸ªº¦ì¸m¡C
-				p ^= mask; //°£¥h¦ì©ó³Ì§C¦ì¤¸ªº¸Ó§LºØ
-				ssrc = GetIndex(mask); //±N³Ì§C¦ì¤¸ªº§LºØ³]¬°¨«¨B°_ÂI
-					dest = pMoves[ssrc] & tpiece[0];//¥u¨«ªÅ®æ
-				while(dest){ //¦pªG dest ¦³¦h­Ó¦ì¸mªº¸Ü,¤À¶}¦s°_¨Ó¡C
+		for(int i=1; i<8; i++){ //ç´…æ–¹ç´”ç§»å‹•
+			U32 p = tpiece[i]; //å–å¾—æ£‹å­ä½ç½®
+			while(p){ //å°‡ç´…è‰² 1~7 è™Ÿçš„å­éƒ½æœå°‹ä¸€é
+				U32 mask = LS1B(p); //å¦‚æœè©²æ£‹å­åœ¨å¤šå€‹ä½ç½®,å…ˆå–ä½ä½å…ƒçš„ä½ç½®ã€‚
+				p ^= mask; //é™¤å»ä½æ–¼æœ€ä½ä½å…ƒçš„è©²å…µç¨®
+				ssrc = GetIndex(mask); //å°‡æœ€ä½ä½å…ƒçš„å…µç¨®è¨­ç‚ºèµ°æ­¥èµ·é»
+					dest = pMoves[ssrc] & tpiece[0];//åªèµ°ç©ºæ ¼
+				while(dest){ //å¦‚æœ dest æœ‰å¤šå€‹ä½ç½®çš„è©±,åˆ†é–‹å­˜èµ·ä¾†ã€‚
 					U32 mask2 = LS1B(dest);
 					dest ^= mask2;
 					U32 result = GetIndex(mask2);
@@ -1319,11 +1317,11 @@ void chess(U32 tblack,U32 tred,U32 tpiece[16],int deep) //deep+color%2 0red 1bla
 
 U32 CGen(int ssrc,U32 toccupied)
 {
-	int r=ssrc/4;//¦C 
-	int c=ssrc%4;//¦æ 
+	int r=ssrc/4;//åˆ— 
+	int c=ssrc%4;//è¡Œ 
 	U32 result=0;
 	U32 resulta=0;
-	U32 x = ( (row[r] & toccupied) ^ (1<<ssrc) ) >> (4*r);//¨ú¥X¸ò¬¶¦P¦C «d¥h¬¶¥»¨­¨º®æ
+	U32 x = ( (row[r] & toccupied) ^ (1<<ssrc) ) >> (4*r);//å–å‡ºè·Ÿç‚®åŒåˆ— å‰Šå»ç‚®æœ¬èº«é‚£æ ¼
 	if(x&&c==0){
 		result|=CGenCL(x);
 	}
@@ -1338,7 +1336,7 @@ U32 CGen(int ssrc,U32 toccupied)
 	}
 	result=result << (4*r);
 	
-	x = ( (file[c] & toccupied) ^ (1<<ssrc) ) >> c;//¨ú¥X¸ò¬¶¦P¦æ ¨Ã¥ş³¡©ñ¨ì²Ä1¦æ
+	x = ( (file[c] & toccupied) ^ (1<<ssrc) ) >> c;//å–å‡ºè·Ÿç‚®åŒè¡Œ ä¸¦å…¨éƒ¨æ”¾åˆ°ç¬¬1è¡Œ
 	if(x&&r==0) 
 	{
 		resulta|=CGenCL(x);
@@ -1389,22 +1387,22 @@ U32 CGen(int ssrc,U32 toccupied)
 
 U32 CGenCL(U32 x){
 	if(x){
-		U32 mask = LS1B(x); //mask ¬°¬¶¬[ªº¾B¸n¦ì¸m,Åı x ®ø¥h¬¶¬[¡C
-		return (x ^= mask) ? LS1B(x) : 0; //ª¬ªp 5~8 ¶Ç¦^ LS1B(x),ª¬ªp 2~4 ¶Ç¦^ 0¡C
+		U32 mask = LS1B(x); //mask ç‚ºç‚®æ¶çš„é®ç½©ä½ç½®,è®“ x æ¶ˆå»ç‚®æ¶ã€‚
+		return (x ^= mask) ? LS1B(x) : 0; //ç‹€æ³ 5~8 å‚³å› LS1B(x),ç‹€æ³ 2~4 å‚³å› 0ã€‚
 	}else return 0;
 }
 
 U32 CGenCR(U32 x){
 	if(x){
-		U32 mask = MS1B(x); //mask ¬°¬¶¬[ªº¾B¸n¦ì¸m,Åı x ®ø¥h¬¶¬[¡C
-		return (x ^= mask) ? MS1B(x) : 0; //ª¬ªp 5~8 ¶Ç¦^ MS1B(x),ª¬ªp 2~4 ¶Ç¦^ 0¡C
+		U32 mask = MS1B(x); //mask ç‚ºç‚®æ¶çš„é®ç½©ä½ç½®,è®“ x æ¶ˆå»ç‚®æ¶ã€‚
+		return (x ^= mask) ? MS1B(x) : 0; //ç‹€æ³ 5~8 å‚³å› MS1B(x),ç‹€æ³ 2~4 å‚³å› 0ã€‚
 	}else return 0;
 }
 
 int MCSCount(int pie[14])
 {
 	int power = 0;
-	if(color==0)//¬õ 
+	if(color==0)//ç´… 
 	{
 		for(int i=0;i<7;i++)
 		{
@@ -1429,7 +1427,7 @@ int MCSCount(int pie[14])
 	return power;
 }
 
-double countAva(int pie[14],int deep,U32 curPiece[16])//±N¤h¬Û¨®°¨¬¶§L
+double countAva(int pie[14],int deep,U32 curPiece[16])//å°‡å£«ç›¸è»Šé¦¬ç‚®å…µ
 {
 	int eat[10];
 	int biggest=0;
@@ -1437,7 +1435,7 @@ double countAva(int pie[14],int deep,U32 curPiece[16])//±N¤h¬Û¨®°¨¬¶§L
 	int power=0;
 	int redleft=0;
 	int blackleft=0;
-	if(color==0)//¬õ 
+	if(color==0)//ç´… 
 	{
 		for(int i=0;i<7;i++)
 		{
@@ -1468,18 +1466,18 @@ double countAva(int pie[14],int deep,U32 curPiece[16])//±N¤h¬Û¨®°¨¬¶§L
 		if(redleft==0) power=100000-deep*10000;
 	}
 	int movePoint=0;
-	//-----------------------------------------------------§ä½Ö³Q¦Yªº¨ç¼Æ 
-	//int check=0;//¦pªG¨S§ä¨ì½Ö³Q¦Y 
-	//int PointMayEat=0;//§ä¨ì§Y±N¦Y½Öªº³Ì¤j¤l 
-	//for(int i=0; i<AEMindex ;i++)//i©Ò¦³³Q¦Y¤l 
+	//-----------------------------------------------------æ‰¾èª°è¢«åƒçš„å‡½æ•¸ 
+	//int check=0;//å¦‚æœæ²’æ‰¾åˆ°èª°è¢«åƒ 
+	//int PointMayEat=0;//æ‰¾åˆ°å³å°‡åƒèª°çš„æœ€å¤§å­ 
+	//for(int i=0; i<AEMindex ;i++)//iæ‰€æœ‰è¢«åƒå­ 
 	//{
-		//for(int ii=1; ii<15; ii++)//ii§ä¨º­Ó¦ì¸m¬°­ş­Ó¤l
+		//for(int ii=1; ii<15; ii++)//iiæ‰¾é‚£å€‹ä½ç½®ç‚ºå“ªå€‹å­
 		//{
-			//U32 eaten=1<<allEatMove[i][1];//allEatMove[i][1]°¨¤W¥i¯à³Q¦Yªº¤lªº¦ì¸m 
+			//U32 eaten=1<<allEatMove[i][1];//allEatMove[i][1]é¦¬ä¸Šå¯èƒ½è¢«åƒçš„å­çš„ä½ç½® 
 			//if((curPiece[ii]&eaten)!=0)
 			//{
 				//if(piPw[ii]>PointMayEat)
-					//PointMayEat=piPw[ii];//§ä³Ì¤j³Q¦Y¤l¤À¼Æ 
+					//PointMayEat=piPw[ii];//æ‰¾æœ€å¤§è¢«åƒå­åˆ†æ•¸ 
 				//check=1;
 			//}
 		//} 
@@ -1505,13 +1503,13 @@ int search(int depth,U32 curPiece[16],U32 curRed,U32 curBlack,U32 curOccupied,in
 	curRed=curPiece[1]|curPiece[2]|curPiece[3]|curPiece[4]|curPiece[5]|curPiece[6]|curPiece[7];
 	curBlack=curPiece[8]|curPiece[9]|curPiece[10]|curPiece[11]|curPiece[12]|curPiece[13]|curPiece[14];
 	chess(curBlack,curRed,curPiece,depth);
-	U32 taEM[50][2];//¦s¥i¦Y¤lªº¤èªk 0 src 1 dst Á×§K³Q©¹¤U·j´M®É¨ê±¼
+	U32 taEM[50][2];//å­˜å¯åƒå­çš„æ–¹æ³• 0 src 1 dst é¿å…è¢«å¾€ä¸‹æœå°‹æ™‚åˆ·æ‰
 	int tAEMi=AEMindex;//alleatmove index
-	U32 taOM[50][2];//¦s¥i²¾°Ê«D¦Y¤lªº¤èªk 0 src 1 dst
+	U32 taOM[50][2];//å­˜å¯ç§»å‹•éåƒå­çš„æ–¹æ³• 0 src 1 dst
 	int tAOMi=AOMindex;//allonlymove index
 	memcpy(taEM,allEatMove,sizeof(taEM));
 	memcpy(taOM,allOnlyMove,sizeof(taOM));
-	int re=countAva(curPie,depth,curPiece);//´£«e­pºâ¦n¤À¼Æ 
+	int re=countAva(curPie,depth,curPiece);//æå‰è¨ˆç®—å¥½åˆ†æ•¸ 
 	
 	if(depth==maxDepth||(depth>=noReDepth&&(tAEMi+tAOMi)==0))
 	{
@@ -1527,12 +1525,12 @@ int search(int depth,U32 curPiece[16],U32 curRed,U32 curBlack,U32 curOccupied,in
 		if(curRed==0) return 100000-depth*10000;
 		else if(curBlack==0)return -100000+depth*10000;
 	}
- 	int weight[100][3];//­pºâ©Ò¦³²¾°Ê»PÂ½´Ñªº±o¤À0src 1dst 2weight 
+ 	int weight[100][3];//è¨ˆç®—æ‰€æœ‰ç§»å‹•èˆ‡ç¿»æ£‹çš„å¾—åˆ†0src 1dst 2weight 
 	int wp=0;// weight pointer
 	int best=-9999999;
 	if(depth%2==1)
 		best=9999999;
-	if(curPiece[15]!=0&&depth>noReDepth)//¥i¥H¨«ªÅ¨B
+	if(curPiece[15]!=0&&depth>noReDepth)//å¯ä»¥èµ°ç©ºæ­¥
 	{
 		int deeper=depth+1;
 		weight[wp][0]=0;
@@ -1540,27 +1538,27 @@ int search(int depth,U32 curPiece[16],U32 curRed,U32 curBlack,U32 curOccupied,in
 		weight[wp][2]=re;
 		wp++;
 	}
-	if(curPiece[15]!=0)//¥ı¸ÕÂ½´Ñ °µ§¹«ácall search 
+	if(curPiece[15]!=0)//å…ˆè©¦ç¿»æ£‹ åšå®Œå¾Œcall search 
 	{
-		for(int ssrc=0; ssrc<32; ssrc++){ //·j´M½L­±¤W 32 ­Ó¦ì¸m
-			if(curPiece[15] & ( 1 << ssrc ) && ch & ( 1 << ssrc )&&depth<=noReDepth){ //­Y¬°¥¼Â½¤l ¦b¥¼Â½¤lªº¾B¸n¤º depth<=2
+		for(int ssrc=0; ssrc<32; ssrc++){ //æœå°‹ç›¤é¢ä¸Š 32 å€‹ä½ç½®
+			if(curPiece[15] & ( 1 << ssrc ) && ch & ( 1 << ssrc )&&depth<=noReDepth){ //è‹¥ç‚ºæœªç¿»å­ åœ¨æœªç¿»å­çš„é®ç½©å…§ depth<=2
 				if(depth==0)
 				{
 					int r=rand()%6;;
-					string a[6]={"¡ó3¡ó","(--;)","(¡²£s¡²)","(¡¦-_-`)","|£s£»¡^","(*¡ÙÊJ¡Ø)"};
+					string a[6]={"âŠ™3âŠ™","(--;)","(ã€ƒÏ‰ã€ƒ)","(â€™-_-`)","|Ï‰Ë™ï¼‰","(*â‰§è‰¸â‰¦)"};
 					cout<<a[r]+".";
 				}
 				weight[wp][2]=0;
 				int a=0;
-				for(int pID=0; pID<14; pID++){ //·j´M¥i¯à·|Â½¥X¤§¤l
-					if(DCount[pID]){ //­Y¸Ó§LºØ¥i¯à³QÂ½¥X
+				for(int pID=0; pID<14; pID++){ //æœå°‹å¯èƒ½æœƒç¿»å‡ºä¹‹å­
+					if(DCount[pID]){ //è‹¥è©²å…µç¨®å¯èƒ½è¢«ç¿»å‡º
 						a+=DCount[pID];
 						U32 c=1<<ssrc;
 						int cpID=pID+1;
 						curPiece[cpID]|=c;
 						curPiece[15]^=c;
 						DCount[pID]--;
-						//¼ÒÀÀ¸Ó§LºØÂ½¥X¨Ó
+						//æ¨¡æ“¬è©²å…µç¨®ç¿»å‡ºä¾†
 						weight[wp][0] =ssrc;
 						weight[wp][1] =ssrc;
 						weight[wp][2] += ((DCount[pID]+1)*search(depth+1,curPiece,curRed,curBlack,curOccupied,curPie,alpha,beta));
@@ -1568,7 +1566,7 @@ int search(int depth,U32 curPiece[16],U32 curRed,U32 curBlack,U32 curOccupied,in
 						curPiece[cpID]^=c;
 						curPiece[15]|=c;
 						DCount[pID]++;
-						//´_­ìÂ½¥Xªº§LºØ 
+						//å¾©åŸç¿»å‡ºçš„å…µç¨® 
 					}
 				}
 				weight[wp][2]/=a;
@@ -1608,21 +1606,21 @@ int search(int depth,U32 curPiece[16],U32 curRed,U32 curBlack,U32 curOccupied,in
 	
 	if(tAEMi+tAOMi!=0)
 	{
-		if(tAEMi>0)//¸Õ¦Y¤l 
+		if(tAEMi>0)//è©¦åƒå­ 
 		for(int i=0;i<tAEMi;i++)
 		{
 			weight[wp][2]=0;
 			int c1p,c2p=-1;
 			U32 c1=1<<taEM[i][0];
 			U32 c2=1<<taEM[i][1];
-			for(int ii=1;ii<15;ii++){//§ä¨ìc1 ©ñ¤Jc1p  
+			for(int ii=1;ii<15;ii++){//æ‰¾åˆ°c1 æ”¾å…¥c1p  
 				U32 check=curPiece[ii]&c1;
 				if(check!=0){
 					c1p=ii;
 					break;
 				}
 			}
-			for(int ii=1;ii<15;ii++){//§äc2 ²M±¼ ³Ñ¾l´Ñ¤l¼Æ§ó§ï 
+			for(int ii=1;ii<15;ii++){//æ‰¾c2 æ¸…æ‰ å‰©é¤˜æ£‹å­æ•¸æ›´æ”¹ 
 				U32 check=curPiece[ii]&c2;
 				if(check!=0){
 					c2p=ii;
@@ -1630,16 +1628,16 @@ int search(int depth,U32 curPiece[16],U32 curRed,U32 curBlack,U32 curOccupied,in
 				}
 			}
 			if(c2p==-1||c1p==-1) cout<<"err 405";
-			curPiece[c1p]^=c1;//²M°£­ì¦ì¸mc1
-			curPiece[c1p]|=c2;//²¾°Ê
-			curPiece[0]|=c1;//ªÅ®æ+c1
-			curOccupied^=c1;//c1µL¤l
-			if(c2p!=-1){//¦Y¤l²¾°Ê 
-				curPiece[c2p]^=c2;//²M°£­ì¦ì¸mc2
+			curPiece[c1p]^=c1;//æ¸…é™¤åŸä½ç½®c1
+			curPiece[c1p]|=c2;//ç§»å‹•
+			curPiece[0]|=c1;//ç©ºæ ¼+c1
+			curOccupied^=c1;//c1ç„¡å­
+			if(c2p!=-1){//åƒå­ç§»å‹• 
+				curPiece[c2p]^=c2;//æ¸…é™¤åŸä½ç½®c2
 				int c2ps=c2p-1;
 				curPie[c2ps]--;
 			}
-			else//µL¦Y¤l²¾°Ê ¦¹³B¤£·|µo¥Í ¥u¦³¦Y¤l²¾°Ê 
+			else//ç„¡åƒå­ç§»å‹• æ­¤è™•ä¸æœƒç™¼ç”Ÿ åªæœ‰åƒå­ç§»å‹• 
 			{
 				cout<<"err 303";
 			}
@@ -1647,18 +1645,18 @@ int search(int depth,U32 curPiece[16],U32 curRed,U32 curBlack,U32 curOccupied,in
 			weight[wp][1] =taEM[i][1];
 			weight[wp][2] =search(depth+1,curPiece,curRed,curBlack,curOccupied,curPie,alpha,beta);
 			
-			curPiece[c1p]^=c2;//²M°£­ì¦ì¸mc2
-			curPiece[0]|=c2;//ªÅ®æ+c2
-			curPiece[c1p]|=c1;//²¾°Ê
-			curOccupied|=c1;//c1¦³¤l
-			curPiece[0]^=c1;//ªÅ®æ-c1
-			if(c2p!=-1){//¦Y¤l²¾°Ê 
-				curPiece[c2p]|=c2;//¦^­ì¦ì¸mc2
+			curPiece[c1p]^=c2;//æ¸…é™¤åŸä½ç½®c2
+			curPiece[0]|=c2;//ç©ºæ ¼+c2
+			curPiece[c1p]|=c1;//ç§»å‹•
+			curOccupied|=c1;//c1æœ‰å­
+			curPiece[0]^=c1;//ç©ºæ ¼-c1
+			if(c2p!=-1){//åƒå­ç§»å‹• 
+				curPiece[c2p]|=c2;//å›åŸä½ç½®c2
 				int c2ps=c2p-1;
 				curPie[c2ps]++;
 				curPiece[0]^=c2;
 			}
-			else//µL¦Y¤l²¾°Ê
+			else//ç„¡åƒå­ç§»å‹•
 			{
 				cout<<"err509";
 			}
@@ -1693,7 +1691,7 @@ int search(int depth,U32 curPiece[16],U32 curRed,U32 curBlack,U32 curOccupied,in
 			}
 			wp++;
 		}
-		for(int i=0;i<tAOMi;i++)//¯Â²¾°Ê --------------------------------------------------------------------------------------------------------
+		for(int i=0;i<tAOMi;i++)//ç´”ç§»å‹• --------------------------------------------------------------------------------------------------------
 		{
 			weight[wp][2]=0;
 			int c1p,c2p=-1;
@@ -1706,44 +1704,44 @@ int search(int depth,U32 curPiece[16],U32 curRed,U32 curBlack,U32 curOccupied,in
 					break;
 				}
 			}
-			for(int ii=1;ii<15;ii++){//§äc2 ²M±¼ ³Ñ¾l´Ñ¤l¼Æ§ó§ï 
+			for(int ii=1;ii<15;ii++){//æ‰¾c2 æ¸…æ‰ å‰©é¤˜æ£‹å­æ•¸æ›´æ”¹ 
 				U32 check=curPiece[ii]&c2;
 				if(check!=0){
 					c2p=ii;
 					break;
 				}
 			}
-			curPiece[c1p]^=c1;//²M°£­ì¦ì¸mc1
-			curPiece[c1p]|=c2;//²¾°Ê
-			curPiece[0]|=c1;//ªÅ®æ+c1
-			curOccupied^=c1;//c1µL¤l
+			curPiece[c1p]^=c1;//æ¸…é™¤åŸä½ç½®c1
+			curPiece[c1p]|=c2;//ç§»å‹•
+			curPiece[0]|=c1;//ç©ºæ ¼+c1
+			curOccupied^=c1;//c1ç„¡å­
 			if(c1p>15||c1p<1)
 			{
 				cout<<"err 510"<<endl;
 			}
-			if(c2p!=-1){//¦Y¤l²¾°Ê 
+			if(c2p!=-1){//åƒå­ç§»å‹• 
 				cout<<"err 511"<<endl;
 			}
-			else//µL¦Y¤l²¾°Ê 
+			else//ç„¡åƒå­ç§»å‹• 
 			{
-				curPiece[0]^=c2;//ªÅ®æ-c2
-				curOccupied|=c2;//c2¦³¤l 
+				curPiece[0]^=c2;//ç©ºæ ¼-c2
+				curOccupied|=c2;//c2æœ‰å­ 
 			}
 			weight[wp][0] =taOM[i][0];
 			weight[wp][1] =taOM[i][1];
 			weight[wp][2] =search(depth+1,curPiece,curRed,curBlack,curOccupied,curPie,alpha,beta);
 			
-			curPiece[c1p]^=c2;//²M°£­ì¦ì¸mc2
-			curPiece[0]|=c2;//ªÅ®æ+c2
-			curPiece[c1p]|=c1;//²¾°Ê
-			curOccupied|=c1;//c1¦³¤l
-			curPiece[0]^=c1;//ªÅ®æ-c1
-			if(c2p!=-1){//¦Y¤l²¾°Ê 
+			curPiece[c1p]^=c2;//æ¸…é™¤åŸä½ç½®c2
+			curPiece[0]|=c2;//ç©ºæ ¼+c2
+			curPiece[c1p]|=c1;//ç§»å‹•
+			curOccupied|=c1;//c1æœ‰å­
+			curPiece[0]^=c1;//ç©ºæ ¼-c1
+			if(c2p!=-1){//åƒå­ç§»å‹• 
 				cout<<"err 512 "<<endl;
 			}
-			else//µL¦Y¤l²¾°Ê 
+			else//ç„¡åƒå­ç§»å‹• 
 			{
-				curOccupied^=c2;//c2µL¤l 
+				curOccupied^=c2;//c2ç„¡å­ 
 			}
 			if(depth%2==0)//max
 			{
@@ -1799,18 +1797,18 @@ int search(int depth,U32 curPiece[16],U32 curRed,U32 curBlack,U32 curOccupied,in
 		}
 		else if(draw==1)
 		{
-			if(best<0); //¥i¯à¿é ¬G·N¥­¤â? 
+			if(best<0); //å¯èƒ½è¼¸ æ•…æ„å¹³æ‰‹? 
 			else if(srci==past_walk[1][1]&&dsti==past_walk[1][0])
 			{
 				cout<<"draw denied"<<endl;
-				weight[recordi][2]-=999999;//¥i¯à·|Ä¹ ¿ï¾Ü¤£¥­¤â? 
+				weight[recordi][2]-=999999;//å¯èƒ½æœƒè´ é¸æ“‡ä¸å¹³æ‰‹? 
 				best=weight[0][2];
 				for(int ii=0;ii<wp;ii++)
 				{
-					if(weight[ii][0]==srci)//¨ºÁû´Ñ¤l¬ÛÃö¥ş³¡³£-999999 
+					if(weight[ii][0]==srci)//é‚£é¡†æ£‹å­ç›¸é—œå…¨éƒ¨éƒ½-999999 
 					weight[ii][2]-=999999;
 				}
-				for(int ii=wp-1;ii>=0;ii--)//­«·s´M§ä 
+				for(int ii=wp-1;ii>=0;ii--)//é‡æ–°å°‹æ‰¾ 
 				{
 					if(weight[ii][2]>best)
 					{
@@ -1865,22 +1863,22 @@ void dynamicPower(int curPie[14])
 int findPiece(int place,U32 curPiece[16])
 {
 	U32 bplace=1<<place;
-	for(int i=1;i<15;i++)//§ä14ºØ´Ñ¤¤ ½Ö¦b³o­Ó¦ì¸m¤W 
+	for(int i=1;i<15;i++)//æ‰¾14ç¨®æ£‹ä¸­ èª°åœ¨é€™å€‹ä½ç½®ä¸Š 
 	{
 		if((curPiece[i]&bplace)!=0)
 		{
 			i--;
-			return i;//§ä¨ì´Ñ¤l¦^¶Ç 
+			return i;//æ‰¾åˆ°æ£‹å­å›å‚³ 
 		}
 	}
-	return -1;//¿ù»~ 
+	return -1;//éŒ¯èª¤ 
 }
 
-void readBoard()//ÅªÀÉ¼Ò¦¡ Åª¨úboard.txt±M¥Î 
+void readBoard()//è®€æª”æ¨¡å¼ è®€å–board.txtå°ˆç”¨ 
 {
 	vector<string> move;
-	int cp=0;//current_position­pºâ¦ì§} 
-	int line=0;//¥Ø«eÅª¨ìªº¦æ¼Æ 
+	int cp=0;//current_positionè¨ˆç®—ä½å€ 
+	int line=0;//ç›®å‰è®€åˆ°çš„è¡Œæ•¸ 
 	ifstream file;
 	string str;
 	file.open("board.txt",ios::in);
@@ -1895,14 +1893,14 @@ void readBoard()//ÅªÀÉ¼Ò¦¡ Åª¨úboard.txt±M¥Î
 		{
 			for(int i=0;i<=13;i++)
 			{
-				piece_count[i]=str[i*2+2]-'0';//§â³Ñ¾l´Ñ¤lÅª¤Jpiece_count 
+				piece_count[i]=str[i*2+2]-'0';//æŠŠå‰©é¤˜æ£‹å­è®€å…¥piece_count 
 			}
 		}
 		if(line>=3&&line<=10&&initailBoard==1)
 		{
 			for(int i=0;i<=3;i++)
 			{
-				current_position[cp]=str[i*2+2];//Åª¤Jªì©l³õ¤Wª¬ªp ¥uÅª¤@¦¸ 
+				current_position[cp]=str[i*2+2];//è®€å…¥åˆå§‹å ´ä¸Šç‹€æ³ åªè®€ä¸€æ¬¡ 
 				cp++;
 			}
 			if(line==10)
@@ -1932,29 +1930,29 @@ void readBoard()//ÅªÀÉ¼Ò¦¡ Åª¨úboard.txt±M¥Î
 		
 	}
 	file.close();
-	if (first && !move.empty()) {//¥ı¤â ³B²z§Ú¤èÃC¦â 
-		if (move[0].at(3) - 91 > 0)//¤p¼g
-			color = 1;//¶Â
+	if (first && !move.empty()) {//å…ˆæ‰‹ è™•ç†æˆ‘æ–¹é¡è‰² 
+		if (move[0].at(3) - 91 > 0)//å°å¯«
+			color = 1;//é»‘
 		else
-			color = 0;//¬õ
+			color = 0;//ç´…
 	}
-	else if(!move.empty()){//«á¤â
-		if (move[0].at(3) - 91 > 0)//¤p¼g
-			color = 0;//¬õ
+	else if(!move.empty()){//å¾Œæ‰‹
+		if (move[0].at(3) - 91 > 0)//å°å¯«
+			color = 0;//ç´…
 		else
-			color = 1;//¶Â
+			color = 1;//é»‘
 	}
 	else {
 		color = 0;
 	}
 	//cout << "color(b0 r1 u-1): " << color<<"\n";
-	for (int i = 0; i < move.size(); i++) {//record in char board[4][8] ³B²zhistory ²£¥Í²{¦b´Ñª© 
+	for (int i = 0; i < move.size(); i++) {//record in char board[4][8] è™•ç†history ç”¢ç”Ÿç¾åœ¨æ£‹ç‰ˆ 
 		//cout<<i<<move[i].at(0)<<move[i].at(1)<<move[i].at(2)<<endl;
 		if (move[i].at(2) == '(') {//record move 'flip' (kgmrncp)
 			//string a=move[i].substr(0,2);
 			int aa=100-move[i].at(0);
 			int bb=4*(56-move[i].at(1));
-			U32 cc=aa+bb;//´Ñ½L½s¸¹0~31
+			U32 cc=aa+bb;//æ£‹ç›¤ç·¨è™Ÿ0~31
 			cc=1<<cc;
 			if(move[i].at(3)=='K') {piece[1]|=cc;red|=cc;piece[15]^=cc;DCount[0]--;}
 			if(move[i].at(3)=='G') {piece[2]|=cc;red|=cc;piece[15]^=cc;DCount[1]--;}
@@ -1973,12 +1971,12 @@ void readBoard()//ÅªÀÉ¼Ò¦¡ Åª¨úboard.txt±M¥Î
 			//board[move[i].at(0)-'a'][move[i].at(1)-'1'] = move[i].at(3);	//board[a][1]=k,ai(k)
 			//cout << board[move[i].at(0) - 'a'][move[i].at(1) - '1'] ;
 		}
-		else {//a1-b1¤§Ãş 
+		else {//a1-b1ä¹‹é¡ 
 			int c1p,c2p;
-			c2p=-1;//¦pªG¬O-1¬°²¾°Ê 
+			c2p=-1;//å¦‚æœæ˜¯-1ç‚ºç§»å‹• 
 			int aa=100-move[i].at(0);
 			int bb=4*(56-move[i].at(1));
-			U32 c1=aa+bb;//´Ñ½L½s¸¹0~31
+			U32 c1=aa+bb;//æ£‹ç›¤ç·¨è™Ÿ0~31
 			past_walk[6][0]=past_walk[5][0];
 			past_walk[5][0]=past_walk[4][0];
 			past_walk[4][0]=past_walk[3][0];
@@ -1991,7 +1989,7 @@ void readBoard()//ÅªÀÉ¼Ò¦¡ Åª¨úboard.txt±M¥Î
 			
 			int aaa=100-move[i].at(3);
 			int bbb=4*(56-move[i].at(4));
-			U32 c2=aaa+bbb;//´Ñ½L½s¸¹0~31
+			U32 c2=aaa+bbb;//æ£‹ç›¤ç·¨è™Ÿ0~31
 			past_walk[6][1]=past_walk[5][1];
 			past_walk[5][1]=past_walk[4][1];
 			past_walk[4][1]=past_walk[3][1];
@@ -2008,44 +2006,44 @@ void readBoard()//ÅªÀÉ¼Ò¦¡ Åª¨úboard.txt±M¥Î
 					break;
 				}
 			}
-			for(int ii=1;ii<15;ii++){//§äc2 ²M±¼ ³Ñ¾l´Ñ¤l¼Æ§ó§ï 
+			for(int ii=1;ii<15;ii++){//æ‰¾c2 æ¸…æ‰ å‰©é¤˜æ£‹å­æ•¸æ›´æ”¹ 
 				U32 check=piece[ii]&c2;
 				if(check!=0){
 					c2p=ii;
 				}
 			}
-			piece[c1p]^=c1;//²M°£­ì¦ì¸mc1
-			piece[0]|=c1;//ªÅ®æ+c1
-			piece[c1p]|=c2;//²¾°Ê
-			if(c2p!=-1){//¦Y¤l²¾°Ê 
-				piece[c2p]^=c2;//²M°£­ì¦ì¸mc2
+			piece[c1p]^=c1;//æ¸…é™¤åŸä½ç½®c1
+			piece[0]|=c1;//ç©ºæ ¼+c1
+			piece[c1p]|=c2;//ç§»å‹•
+			if(c2p!=-1){//åƒå­ç§»å‹• 
+				piece[c2p]^=c2;//æ¸…é™¤åŸä½ç½®c2
 				int c2ps=c2p-1;
 				piece_count[c2ps]--;
-				if(8>c1p){//¬õ¦Y¶Â
+				if(8>c1p){//ç´…åƒé»‘
 					red^=c1;
 					black^=c2;
 					red|=c2;
 				}
-				else{//¶Â¦Y¬õ 
+				else{//é»‘åƒç´… 
 					black^=c1;
 					red^=c2;
 					black|=c2;
 				}
-				occupied^=c1;//c1µL¤l 
+				occupied^=c1;//c1ç„¡å­ 
 			}
-			else//µL¦Y¤l²¾°Ê 
+			else//ç„¡åƒå­ç§»å‹• 
 			{
-				if(8>c1p){//¬õ°Ê 
+				if(8>c1p){//ç´…å‹• 
 					red^=c1;
 					red|=c2;
 				}
-				else{//¶Â°Ê 
+				else{//é»‘å‹• 
 					black^=c1;
 					black|=c2;
 				}
-				piece[0]^=c2;//ªÅ®æ-c2
-				occupied^=c1;//c1µL¤l 
-				occupied|=c2;//c2¦³¤l 
+				piece[0]^=c2;//ç©ºæ ¼-c2
+				occupied^=c1;//c1ç„¡å­ 
+				occupied|=c2;//c2æœ‰å­ 
 			}
 			//board[move[i].at(3) - 'a'][move[i].at(4) - '1'] = board[move[i].at(0) - 'a'][move[i].at(1) - '1'];	//board[a][2]=k, a1-a2
 			//board[move[i].at(0) - 'a'][move[i].at(1) - '1'] = '-';												//board[a][1]='-', a1-a2
@@ -2055,7 +2053,7 @@ void readBoard()//ÅªÀÉ¼Ò¦¡ Åª¨úboard.txt±M¥Î
 	//cout<<hex<<piece[9];
 }
  
-void createMovetxt()//­I´º¼Ò¦¡ 
+void createMovetxt()//èƒŒæ™¯æ¨¡å¼ 
 {
 	fstream file;
 	file.open("move.txt",ios::out);
