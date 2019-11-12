@@ -63,6 +63,9 @@ int specialSeeds = 0;
 int globalspecialSeeds = 0;//specialSeeds for all play (seeds[i]=rand())
 vector<int> seeds;// generate rand seeds as many as turn in main 
 map<int, char> flipboard;
+int who = 0;
+int step = 0;
+HWND hWnd;
 //*******************************//
 
 // The main window class name.
@@ -85,7 +88,6 @@ bool checktimeout(double start, double end, int whostime);
 bool docreate();
 bool doenter();
 bool repetition();
-
 LRESULT CALLBACK WndProc(HWND, UINT, WPARAM, LPARAM);
 
 int CALLBACK WinMain(_In_ HINSTANCE hInstance,_In_ HINSTANCE hPrevInstance,_In_ LPSTR lpCmdLine,_In_ int nCmdShow)
@@ -126,7 +128,7 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance,_In_ HINSTANCE hPrevInstance,_In_ 
 	// NULL: this application does not have a menu bar
 	// hInstance: the first parameter from WinMain
 	// NULL: not used in this application
-	HWND hWnd = CreateWindow(szWindowClass,szTitle,WS_OVERLAPPEDWINDOW,CW_USEDEFAULT, CW_USEDEFAULT,400, 800,NULL,NULL,hInstance,NULL);
+	hWnd = CreateWindow(szWindowClass,szTitle,WS_OVERLAPPEDWINDOW,CW_USEDEFAULT, CW_USEDEFAULT,600, 600,NULL,NULL,hInstance,NULL);
 
 	if (!hWnd)
 	{
@@ -144,6 +146,7 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance,_In_ HINSTANCE hPrevInstance,_In_ 
 	SetTimer(hWnd, 1, 1000, nullptr);
 
 	MSG msg;
+	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 15);
 	WriteConsole(GetStdHandle(STD_OUTPUT_HANDLE), TEXT("how many turn\n"), wcslen(TEXT("how many turn\n")), NULL, NULL);
 	char buffer[10];
 	DWORD read;
@@ -162,6 +165,7 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance,_In_ HINSTANCE hPrevInstance,_In_ 
 	ReadConsoleA(GetStdHandle(STD_INPUT_HANDLE), buffer, sizeof(buffer), &read, nullptr);
 	globalspecialSeeds = atoi(buffer);
 	totalturn = turn;
+	TCHAR tempch[100];
 	if (globalspecialSeeds == 0) {
 		srand(time(NULL));
 		globalspecialSeeds = rand();
@@ -178,22 +182,26 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance,_In_ HINSTANCE hPrevInstance,_In_ 
 		else {
 			srand(seeds[totalturn - turn]);
 		}
-		int step = 0;
+		step = 0;
 		init();
 		printwinrecord(1);
 		while (1) {
 			if (!first) {// first:creatroom , second:enterroom
-				cout << "creat step: " << step << endl;
+				wsprintf(tempch, TEXT("create step: %d\n"), step+1);
+				WriteConsole(GetStdHandle(STD_OUTPUT_HANDLE), tempch, wcslen(tempch), NULL, NULL);
 				if (docreate()) { err++; printwinrecord(2); break; }
 				out++;
+				who = 1;
 				SendMessage(hWnd, WM_MY_MESSAGE1, 0, 0);
 				TranslateMessage(&msg);
 				DispatchMessage(&msg);
 				if (check()) { break; }
 				//system("pause");
-				cout << "enter step: " << step << endl;
+				wsprintf(tempch, TEXT("enter step: %d\n"), step+1);
+				WriteConsole(GetStdHandle(STD_OUTPUT_HANDLE), tempch, wcslen(tempch), NULL, NULL);
 				if (doenter()) { err++;  printwinrecord(2); break; }
 				out++;
+				who = 0;
 				SendMessage(hWnd, WM_MY_MESSAGE1, 0, 0);
 				TranslateMessage(&msg);
 				DispatchMessage(&msg);
@@ -204,17 +212,21 @@ int CALLBACK WinMain(_In_ HINSTANCE hInstance,_In_ HINSTANCE hPrevInstance,_In_ 
 
 			}
 			else {// first:enterroom , second:creatroom
-				cout << "enter step: " << step << endl;
+				wsprintf(tempch, TEXT("enter step: %d\n"), step+1);
+				WriteConsole(GetStdHandle(STD_OUTPUT_HANDLE), tempch, wcslen(tempch), NULL, NULL);
 				if (doenter()) { err++; printwinrecord(2); break; }
 				out++;
+				who = 0;
 				SendMessage(hWnd, WM_MY_MESSAGE1, 0, 0);
 				TranslateMessage(&msg);
 				DispatchMessage(&msg);
 				if (check()) { break; }
 				//system("pause");
-				cout << "creat step: " << step << endl;
+				wsprintf(tempch, TEXT("create step: %d\n"), step+1);
+				WriteConsole(GetStdHandle(STD_OUTPUT_HANDLE), tempch, wcslen(tempch), NULL, NULL);
 				if (docreate()) { err++; printwinrecord(2); break; }
 				out++;
+				who = 1;
 				SendMessage(hWnd, WM_MY_MESSAGE1, 0, 0);
 				TranslateMessage(&msg);
 				DispatchMessage(&msg);
@@ -325,6 +337,13 @@ void printwinrecord(int state) {
 }
 
 TCHAR* translate(char a) { //k to 將
+	if (a - 96 > 0) {
+		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_GREEN);
+	}
+	else if(a - 64 > 0 && a - 88 < 0){
+		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), FOREGROUND_RED);
+	}
+		
 	if (a == 'k') {//將
 		TCHAR szText[20] = TEXT("將");
 		return szText;
@@ -405,35 +424,43 @@ TCHAR* translate(char a) { //k to 將
 }
 
 bool check() {
-	cout << "\n";
+	TCHAR tempch[100];
+	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), 15);
+	WriteConsole(GetStdHandle(STD_OUTPUT_HANDLE), TEXT("\n"), wcslen(TEXT("\n")), NULL, NULL);
 	if (!first) {
-		cout << "creatroom first" << endl;
-		cout << "turn: " << totalturn - turn + 1 << endl;
+		WriteConsole(GetStdHandle(STD_OUTPUT_HANDLE), TEXT("createroom first\n"), wcslen(TEXT("createroom first\n")), NULL, NULL);
+		wsprintf(tempch, TEXT("turn: %d\n"), totalturn - turn + 1);
+		WriteConsole(GetStdHandle(STD_OUTPUT_HANDLE), tempch, wcslen(tempch), NULL, NULL);
 		if (color) {
-			cout << "create is R,enter is b" << endl;
+			WriteConsole(GetStdHandle(STD_OUTPUT_HANDLE), TEXT("create is R,enter is b\n"), wcslen(TEXT("create is R,enter is b\n")), NULL, NULL);
 		}
 		else {
-			cout << "create is b,enter is R" << endl;
+			WriteConsole(GetStdHandle(STD_OUTPUT_HANDLE), TEXT("create is b,enter is R\n"), wcslen(TEXT("create is b,enter is R\n")), NULL, NULL);
 		}
 	}
 	else {
-		cout << "enterroom first" << endl;
-		cout << "turn: " << totalturn - turn + 1 << endl;
+		WriteConsole(GetStdHandle(STD_OUTPUT_HANDLE), TEXT("enterroom first\n"), wcslen(TEXT("enterroom first\n")), NULL, NULL);
+		wsprintf(tempch, TEXT("turn: %d\n"), totalturn - turn + 1);
+		WriteConsole(GetStdHandle(STD_OUTPUT_HANDLE), tempch, wcslen(tempch), NULL, NULL);
 		if (color) {
-			cout << "create is R,enter is b" << endl;
+			WriteConsole(GetStdHandle(STD_OUTPUT_HANDLE), TEXT("create is R,enter is b\n"), wcslen(TEXT("create is R,enter is b\n")), NULL, NULL);
 		}
 		else {
-			cout << "create is b,enter is R" << endl;
+			WriteConsole(GetStdHandle(STD_OUTPUT_HANDLE), TEXT("create is b,enter is R\n"), wcslen(TEXT("create is b,enter is R\n")), NULL, NULL);
 		}
 	}
 	int r = 0;// red chess amount
 	int b = 0;// black chess amount
 	for (int i = 0; i < 8; i++) {// print board
-		cout << 8 - i;
+		wsprintf(tempch, TEXT("%d"), 8 - i);
+		WriteConsole(GetStdHandle(STD_OUTPUT_HANDLE), tempch, wcslen(tempch), NULL, NULL);
 		for (int j = 0; j < 4; j++) {	// top down	a7-b7-c7-d7
 										//			a6-b6-c6-d6
-
-			translate(showboard[j][7 - i]);
+			wsprintf(tempch, TEXT("\t"));
+			WriteConsole(GetStdHandle(STD_OUTPUT_HANDLE), tempch, wcslen(tempch), NULL, NULL);
+			wsprintf(tempch, translate(showboard[j][7 - i]));
+			WriteConsole(GetStdHandle(STD_OUTPUT_HANDLE), tempch, wcslen(tempch), NULL, NULL);
+			SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE),15);
 			if (flipboard.empty()) {
 				if (showboard[j][7 - i] - 96 > 0) {// how many black chess left
 					b++;
@@ -445,9 +472,9 @@ bool check() {
 				}
 			}
 		}
-		cout << "\n";
+		WriteConsole(GetStdHandle(STD_OUTPUT_HANDLE), TEXT("\n"), wcslen(TEXT("\n")), NULL, NULL);
 	}
-	cout << "\ta\tb\tc\td\t" << endl;
+	WriteConsole(GetStdHandle(STD_OUTPUT_HANDLE), TEXT("\ta\tb\tc\td\t\n"), wcslen(TEXT("\ta\tb\tc\td\t\n")), NULL, NULL);
 	if (!flipboard.empty()) {
 		return false;
 	}
@@ -990,9 +1017,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 	static HWND l6;
 	static HWND l7;
 	static HWND l8;
-	TCHAR szUsername[100];
-	TCHAR szPassword[100];
-	TCHAR szUserInfo[200];
+	static HWND tt;
+	static HWND t;
+	static HWND st;
+	static HWND co;
 	TCHAR szTexta8[20];
 	TCHAR szTexta7[20];
 	TCHAR szTexta6[20];
@@ -1025,7 +1053,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 	TCHAR szTextd3[20];
 	TCHAR szTextd2[20];
 	TCHAR szTextd1[20];
-	TCHAR szText[20];
+	TCHAR szTexttt[200];
+	TCHAR szTextt[200];
+	TCHAR szTextst[200];
+	TCHAR szTextco[200];
 	static HBRUSH hbrBkgnd;
 	DWORD ctrlID;
 	switch (message) {
@@ -1090,13 +1121,23 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 		l6 = CreateWindow(L"static", translate(showboard[3][0]), WS_CHILD | WS_VISIBLE | WS_BORDER | SS_CENTER, 200, 100, 50, 50, hWnd, (HMENU)56, hInst, NULL);
 		l7 = CreateWindow(L"static", translate(showboard[3][0]), WS_CHILD | WS_VISIBLE | WS_BORDER | SS_CENTER, 200, 50, 50, 50, hWnd, (HMENU)57, hInst, NULL);
 		l8 = CreateWindow(L"static", translate(showboard[3][0]), WS_CHILD | WS_VISIBLE | WS_BORDER | SS_CENTER, 200, 0, 50, 50, hWnd, (HMENU)58, hInst, NULL);
+		wsprintf(szTexttt, TEXT("總場數: "));
+		tt = CreateWindow(L"static", szTexttt, WS_CHILD | WS_VISIBLE, 300, 0, 1000, 50, hWnd, (HMENU)61, hInst, NULL);
+		wsprintf(szTextt, TEXT("目前場數: "));
+		t = CreateWindow(L"static", szTextt, WS_CHILD | WS_VISIBLE, 300, 50, 1000, 50, hWnd, (HMENU)62, hInst, NULL);
+		wsprintf(szTextco, TEXT("create room 是 X 方, enter room 是 X 方"));
+		co = CreateWindow(L"static", szTextco, WS_CHILD | WS_VISIBLE, 300, 100, 1000, 50, hWnd, (HMENU)63, hInst, NULL);
+		wsprintf(szTextst, TEXT("X方第   步"));
+		st = CreateWindow(L"static", szTextst, WS_CHILD | WS_VISIBLE, 300, 150, 1000, 50, hWnd, (HMENU)64, hInst, NULL);
 		break;
 	case WM_PAINT:
-	
+
 		hdc = BeginPaint(hWnd, &ps);
 		EndPaint(hWnd, &ps);
 		break;
 	case WM_DESTROY:
+		DeleteObject(hbrBkgnd);
+		DeleteObject(hFont);
 		PostQuitMessage(0);
 		break;
 	case WM_CTLCOLORSTATIC:
@@ -1104,14 +1145,14 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 		ctrlID = GetDlgCtrlID((HWND)lParam);
 		for (int i = 0; i < 4; i++) {
 			for (int j = 0; j < 8; j++) {
-				if (ctrlID == i*10+j+1)
+				if (ctrlID == i * 10 + j + 1)
 				{
 					if (showboard[i][j] - 96 > 0) {
 						SetTextColor(hdcStatic, RGB(0, 0, 0));
 						SetBkColor(hdcStatic, RGB(255, 255, 255));
 						hbrBkgnd = CreateSolidBrush(RGB(255, 255, 255));
 					}
-					else if(showboard[i][j]=='X'){
+					else if (showboard[i][j] == 'X') {
 						SetTextColor(hdcStatic, RGB(0, 0, 0));
 						SetBkColor(hdcStatic, RGB(0, 0, 0));
 						hbrBkgnd = CreateSolidBrush(RGB(0, 0, 0));
@@ -1127,7 +1168,7 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 						hbrBkgnd = CreateSolidBrush(RGB(255, 255, 255));
 					}
 				}
-			}		
+			}
 		}
 		if (ctrlID > 40) {
 			SetTextColor(hdcStatic, RGB(0, 0, 0));
@@ -1139,9 +1180,9 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 			hbrBkgnd = CreateSolidBrush(RGB(255, 255, 255));
 		}
 		return (INT_PTR)hbrBkgnd;
-	
+
 	case WM_MY_MESSAGE1:
-		hFont = CreateFont(-30, -7.5, 0, 0, 700,FALSE, FALSE, FALSE,DEFAULT_CHARSET,OUT_CHARACTER_PRECIS, CLIP_CHARACTER_PRECIS,DEFAULT_QUALITY,FF_DONTCARE,L"微软雅黑");
+		hFont = CreateFont(-30, -7.5, 0, 0, 700, FALSE, FALSE, FALSE, DEFAULT_CHARSET, OUT_CHARACTER_PRECIS, CLIP_CHARACTER_PRECIS, DEFAULT_QUALITY, FF_DONTCARE, L"微软雅黑");
 		SendMessage(a1, WM_SETFONT, (WPARAM)hFont, NULL);
 		SendMessage(a2, WM_SETFONT, (WPARAM)hFont, NULL);
 		SendMessage(a3, WM_SETFONT, (WPARAM)hFont, NULL);
@@ -1206,6 +1247,20 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 		wsprintf(szTextd3, translate(showboard[3][2]));
 		wsprintf(szTextd2, translate(showboard[3][1]));
 		wsprintf(szTextd1, translate(showboard[3][0]));
+		wsprintf(szTexttt, TEXT("總場數: %d"), totalturn);
+		wsprintf(szTextt, TEXT("目前場數: %d"), totalturn - turn + 1);
+		if (color) {
+			wsprintf(szTextco, TEXT("create room 是 紅 方, enter room 是 黑 方"));
+		}
+		else {
+			wsprintf(szTextco, TEXT("create room 是 黑 方, enter room 是 紅 方"));
+		}
+		if (who) {
+			wsprintf(szTextst, TEXT("create room 方第 %d 步"), step + 1);
+		}
+		else {
+			wsprintf(szTextst, TEXT("enter room 方第 %d 步"), step + 1);
+		}
 		SetWindowText(a8, szTexta8);
 		SetWindowText(a7, szTexta7);
 		SetWindowText(a6, szTexta6);
@@ -1250,6 +1305,10 @@ LRESULT CALLBACK WndProc(HWND hWnd, UINT message, WPARAM wParam, LPARAM lParam) 
 		SetWindowText(l6, TEXT("6"));
 		SetWindowText(l7, TEXT("7"));
 		SetWindowText(l8, TEXT("8"));
+		SetWindowText(tt, szTexttt);
+		SetWindowText(t, szTextt);
+		SetWindowText(co, szTextco);
+		SetWindowText(st, szTextst);
 		break;
 
 	default:
