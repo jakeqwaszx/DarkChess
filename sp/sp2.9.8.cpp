@@ -101,7 +101,7 @@ unsigned int ch;//需要search的位置
 int noReDepth = 1;
 unsigned int randtable[15][32]; //0~13 為雙方兵種 14 未翻
 struct hashdata {
-	int count; int depth; unsigned int curPiece[16];
+	int count; int depth; unsigned int curPiece[16]; int upperbound; int lowerbound;
 };
 unordered_map<unsigned int, hashdata > hashtable;
 unordered_map<unsigned int, hashdata > hashtablef;
@@ -639,27 +639,10 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 					return hashtable[hashindex].count - (depth - hashtable[hashindex].depth);
 				}
 				else {
-					if (depth % 2 == 0) {//max
-						alpha = hashtable[hashindex].count;
-					}
-					else {//min
-						beta = hashtable[hashindex].count;
-					}
-					if (beta <= alpha)
-					{
-						if (depth % 2 == 0) {//max
-							hashtable[hashindex].depth = depth;
-							hashtable[hashindex].count = alpha;
-							memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
-							return alpha;
-						}
-						else {//min
-							hashtable[hashindex].depth = depth;
-							hashtable[hashindex].count = beta;
-							memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
-							return beta;
-						}
-					}
+					if (hashtable[hashindex].lowerbound >= beta)  return hashtable[hashindex].lowerbound;
+					if (hashtable[hashindex].upperbound <= alpha)  return hashtable[hashindex].upperbound;
+					alpha = max(alpha, hashtable[hashindex].lowerbound);
+					beta = min(beta, hashtable[hashindex].upperbound);
 				}
 			}
 		}
@@ -675,12 +658,17 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 	memcpy(taEM, allEatMove, sizeof(taEM));
 	memcpy(taOM, allOnlyMove, sizeof(taOM));
 
+	int OldAlpha = alpha;
+	int OldBeta = beta;
 	unsigned int weightU[100][2];//計算所有移動與翻棋的得分0src 1dst
 	int weight[100];//計算所有移動與翻棋的得分
 	int wp = 0;
 	int best = -9999999;
-	if (depth % 2 == 1)
+	int g = -9999999;
+	if (depth % 2 == 1) {
 		best = 9999999;
+		g = 9999999;
+	}
 
 	for (int i = 0; i < tAEMi; i++)//吃子
 	{
@@ -729,6 +717,7 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 
 		if (depth % 2 == 0)//max
 		{
+			g = max(g, weight[wp]);
 			if (weight[wp] > alpha)
 			{
 				alpha = weight[wp];
@@ -740,6 +729,7 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 		}
 		else//min
 		{
+			g = min(g, weight[wp]);
 			if (weight[wp] < beta)
 			{
 				beta = weight[wp];
@@ -751,6 +741,16 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 		}
 		if (beta <= alpha)
 		{
+			/* Fail low result implies an upper bound */
+			if (g <= alpha)
+				hashtable[hashindex].upperbound = g;
+			/* Found an accurate minimax value - will not occur if called with zero window */
+			if (g > alpha && g < beta)
+				hashtable[hashindex].lowerbound  = g; hashtable[hashindex].upperbound  = g;
+			/* Fail high result implies a lower bound */
+			if (g >= beta)
+				hashtable[hashindex].lowerbound = g;
+
 			if (depth % 2 == 0) {//max
 				hashtable[hashindex].depth = depth;
 				hashtable[hashindex].count = alpha;
@@ -773,6 +773,16 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 		hashtable[hashindex].depth = depth;
 		hashtable[hashindex].count = re;
 		memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
+		g = re;
+		/* Fail low result implies an upper bound */
+		if (g <= alpha)
+			hashtable[hashindex].upperbound = g;
+		/* Found an accurate minimax value - will not occur if called with zero window */
+		if (g > alpha && g < beta)
+			hashtable[hashindex].lowerbound = g; hashtable[hashindex].upperbound = g;
+		/* Fail high result implies a lower bound */
+		if (g >= beta)
+			hashtable[hashindex].lowerbound = g;
 		return re;
 	}
 
@@ -813,6 +823,7 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 
 		if (depth % 2 == 0)//max
 		{
+			g = max(g, weight[wp]);
 			if (weight[wp] > best)
 			{
 				best = weight[wp];
@@ -824,6 +835,7 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 		}
 		else//min
 		{
+			g = min(g, weight[wp]);
 			if (weight[wp] < best)
 			{
 				best = weight[wp];
@@ -835,6 +847,15 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 		}
 		if (beta <= alpha)
 		{
+			/* Fail low result implies an upper bound */
+			if (g <= alpha)
+				hashtable[hashindex].upperbound = g;
+			/* Found an accurate minimax value - will not occur if called with zero window */
+			if (g > alpha && g < beta)
+				hashtable[hashindex].lowerbound = g; hashtable[hashindex].upperbound = g;
+			/* Fail high result implies a lower bound */
+			if (g >= beta)
+				hashtable[hashindex].lowerbound = g;
 			if (depth % 2 == 0) {//max
 				hashtable[hashindex].depth = depth;
 				hashtable[hashindex].count = alpha;
@@ -884,6 +905,7 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 				weight[wp] /= a;
 				if (depth % 2 == 0)//max
 				{
+					g = max(g, weight[wp]);
 					if (weight[wp] > alpha)
 					{
 						alpha = weight[wp];
@@ -895,6 +917,7 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 				}
 				else//min
 				{
+					g = min(g, weight[wp]);
 					if (weight[wp] < beta)
 					{
 						beta = weight[wp];
@@ -906,6 +929,15 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 				}
 				if (beta <= alpha)
 				{
+					/* Fail low result implies an upper bound */
+					if (g <= alpha)
+						hashtable[hashindex].upperbound = g;
+					/* Found an accurate minimax value - will not occur if called with zero window */
+					if (g > alpha && g < beta)
+						hashtable[hashindex].lowerbound = g; hashtable[hashindex].upperbound = g;
+					/* Fail high result implies a lower bound */
+					if (g >= beta)
+						hashtable[hashindex].lowerbound = g;
 					if (depth % 2 == 0) {//max
 						hashtable[hashindex].depth = depth;
 						hashtable[hashindex].count = alpha;
@@ -989,6 +1021,16 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 	hashtable[hashindex].depth = depth;
 	hashtable[hashindex].count = best;
 	memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
+	g = best;
+	/* Fail low result implies an upper bound */
+	if (g <= alpha)
+		hashtable[hashindex].upperbound = g;
+	/* Found an accurate minimax value - will not occur if called with zero window */
+	if (g > alpha && g < beta)
+		hashtable[hashindex].lowerbound = g; hashtable[hashindex].upperbound = g;
+	/* Fail high result implies a lower bound */
+	if (g >= beta)
+		hashtable[hashindex].lowerbound = g;
 	return best;
 }
 
