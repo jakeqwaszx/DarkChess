@@ -641,8 +641,8 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 				else {
 					if (hashtable[hashindex].lowerbound >= beta)  return hashtable[hashindex].lowerbound;
 					if (hashtable[hashindex].upperbound <= alpha)  return hashtable[hashindex].upperbound;
-					alpha = max(alpha, hashtable[hashindex].lowerbound);
-					beta = min(beta, hashtable[hashindex].upperbound);
+					//alpha = max(alpha, hashtable[hashindex].lowerbound);
+					//beta = min(beta, hashtable[hashindex].upperbound);
 				}
 			}
 		}
@@ -744,9 +744,6 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 			/* Fail low result implies an upper bound */
 			if (g <= alpha)
 				hashtable[hashindex].upperbound = g;
-			/* Found an accurate minimax value - will not occur if called with zero window */
-			if (g > alpha && g < beta)
-				hashtable[hashindex].lowerbound  = g; hashtable[hashindex].upperbound  = g;
 			/* Fail high result implies a lower bound */
 			if (g >= beta)
 				hashtable[hashindex].lowerbound = g;
@@ -773,16 +770,15 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 		hashtable[hashindex].depth = depth;
 		hashtable[hashindex].count = re;
 		memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
+
 		g = re;
 		/* Fail low result implies an upper bound */
-		if (g <= alpha)
+		if (g <= alpha) 
 			hashtable[hashindex].upperbound = g;
-		/* Found an accurate minimax value - will not occur if called with zero window */
-		if (g > alpha && g < beta)
-			hashtable[hashindex].lowerbound = g; hashtable[hashindex].upperbound = g;
 		/* Fail high result implies a lower bound */
-		if (g >= beta)
+		if (g >= beta) 
 			hashtable[hashindex].lowerbound = g;
+		
 		return re;
 	}
 
@@ -850,9 +846,6 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 			/* Fail low result implies an upper bound */
 			if (g <= alpha)
 				hashtable[hashindex].upperbound = g;
-			/* Found an accurate minimax value - will not occur if called with zero window */
-			if (g > alpha && g < beta)
-				hashtable[hashindex].lowerbound = g; hashtable[hashindex].upperbound = g;
 			/* Fail high result implies a lower bound */
 			if (g >= beta)
 				hashtable[hashindex].lowerbound = g;
@@ -932,9 +925,6 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 					/* Fail low result implies an upper bound */
 					if (g <= alpha)
 						hashtable[hashindex].upperbound = g;
-					/* Found an accurate minimax value - will not occur if called with zero window */
-					if (g > alpha && g < beta)
-						hashtable[hashindex].lowerbound = g; hashtable[hashindex].upperbound = g;
 					/* Fail high result implies a lower bound */
 					if (g >= beta)
 						hashtable[hashindex].lowerbound = g;
@@ -1025,9 +1015,6 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 	/* Fail low result implies an upper bound */
 	if (g <= alpha)
 		hashtable[hashindex].upperbound = g;
-	/* Found an accurate minimax value - will not occur if called with zero window */
-	if (g > alpha && g < beta)
-		hashtable[hashindex].lowerbound = g; hashtable[hashindex].upperbound = g;
 	/* Fail high result implies a lower bound */
 	if (g >= beta)
 		hashtable[hashindex].lowerbound = g;
