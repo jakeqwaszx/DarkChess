@@ -357,38 +357,27 @@ bool docreate() {
 	double START, END=0.0;
 	START = clock();
 	PROCESS_INFORMATION pi;
-	#pragma omp parallel sections
-	{
-#pragma omp section
-		{
+
+		
 			STARTUPINFO si = { 0 };
 			si.cb = sizeof(si);
 			if (!CreateProcess(TEXT("CreateRoom\\Search\\search.exe"), NULL, NULL, NULL, FALSE,
 				0, 0, TEXT("CreateRoom\\Search"), &si, &pi)) {
 				/* Handle error */
 			}
+			WaitForSingleObject(pi.hProcess, TimeLimit * 1000 - (timeout[1] + (END - START) / CLOCKS_PER_SEC));
+			END = clock();
 			CloseHandle(pi.hThread);
 			CloseHandle(pi.hProcess);
 			//system("cd CreateRoom\\Search && search.exe");// excute creatroom's search.exe
 			done = 1;
-		}
-#pragma omp section
-		{
-			while (!done) {
-				END = clock();
-				if ((timeout[0] + (END - START) / CLOCKS_PER_SEC) >= TimeLimit) {
-					CloseHandle(pi.hThread);
-					CloseHandle(pi.hProcess);
-					//system("taskkill /F /T /IM search.exe");
-				}
-			}
-		}
-	}
+		
+
 
 	if (checktimeout(START, END, 0)) {
 		return true;
 	}
-	Sleep(1000);
+	Sleep(500);
 	ifstream finc("CreateRoom\\Search\\board.txt", ios::in);
 	int startmove = 0;
 	while (getline(finc, str)) {// read creatroom's board.txt
@@ -554,37 +543,31 @@ bool doenter() {
 	double START, END=0.0;
 	START = clock();
 	PROCESS_INFORMATION pi;
-#pragma omp parallel sections
-	{
-#pragma omp section
-		{
+
+
 			STARTUPINFO si = { 0 };
 			si.cb = sizeof(si);
 			if (!CreateProcess(TEXT("EnterRoom\\Search\\search.exe"), NULL, NULL, NULL, FALSE,
 				0, 0, TEXT("EnterRoom\\Search"), &si, &pi)) {
 				/* Handle error */
 			}
+			WaitForSingleObject(pi.hProcess, TimeLimit*1000-(timeout[1] + (END - START) / CLOCKS_PER_SEC));
+			END = clock();
 			CloseHandle(pi.hThread);
 			CloseHandle(pi.hProcess);
 			//system("cd EnterRoom\\Search && search.exe");// excute enterroom's search.exe
 			done = 1;
-		}
-#pragma omp section
-		{
-			while (!done) {
-				END = clock();
-				if ((timeout[1] + (END - START) / CLOCKS_PER_SEC) >= TimeLimit) {
-					CloseHandle(pi.hThread);
-					CloseHandle(pi.hProcess);
-					//system("taskkill /F /T /IM search.exe");
-				}
-			}
-		}
-	}
+		
+
+				
+
+			
+		
+	
 	if (checktimeout(START, END, 1)) {
 		return true;
 	}
-	Sleep(1000);
+	Sleep(500);
 	ifstream finc("EnterRoom\\Search\\board.txt", ios::in);
 	int startmove = 0;
 	while (getline(finc, str)) {// read creatroom's board.txt
