@@ -365,7 +365,7 @@ bool docreate() {
 				0, 0, TEXT("CreateRoom\\Search"), &si, &pi)) {
 				/* Handle error */
 			}
-			WaitForSingleObject(pi.hProcess, TimeLimit * 1000 - (timeout[1] + (END - START) / CLOCKS_PER_SEC));
+			WaitForSingleObject(pi.hProcess, (TimeLimit - timeout[0])*1000 );
 			END = clock();
 			CloseHandle(pi.hThread);
 			CloseHandle(pi.hProcess);
@@ -551,7 +551,7 @@ bool doenter() {
 				0, 0, TEXT("EnterRoom\\Search"), &si, &pi)) {
 				/* Handle error */
 			}
-			WaitForSingleObject(pi.hProcess, TimeLimit*1000-(timeout[1] + (END - START) / CLOCKS_PER_SEC));
+			WaitForSingleObject(pi.hProcess, (TimeLimit-timeout[1])*1000);
 			END = clock();
 			CloseHandle(pi.hThread);
 			CloseHandle(pi.hProcess);
