@@ -101,7 +101,8 @@ unsigned int ch;//需要search的位置
 int noReDepth = 1;
 unsigned int randtable[15][32]; //0~13 為雙方兵種 14 未翻
 struct hashdata {
-	int count; int depth; unsigned int curPiece[16];
+	int count; int depth; unsigned int curPiece[16]; 
+	int MaxMin;//0 Max, 1 Min
 };
 unordered_map<unsigned int, hashdata > hashtable;
 unordered_map<unsigned int, hashdata > hashtablef;
@@ -134,23 +135,28 @@ int main()
 	if (onboardi == 0)maxDepth = 10;
 	complex = onboardi * onboardpi + LivePieces;
 	//if (onboardi <=27)maxDepth = (1000 - complex) / 100;
-	for (maxDepth = 1; (double(stop - start) < 7000 && maxDepth < 21); maxDepth++) {
+	for (maxDepth = 4; (double(stop - start) < 7000 && maxDepth < 21); maxDepth++) {
+		TotalSearch = 0;
+		HashHit = 0;
+		HashHitSameTurn = 0;
+		RealHit = 0;
 		dst = "0";
 		ai2();//決定行動 
 		stop = clock();
 		cout << " 此步耗時 : " << double(stop - start) / CLOCKS_PER_SEC << " 秒(精準度0.001秒) " << endl;
 		cout << " 深度 : " << maxDepth << endl;
+		cout << " 本方為 : ";
+		if (color == 0) cout << "紅 " << endl;
+		else cout << "黑 " << endl;
+		cout << "total search: " << TotalSearch << endl;
+		cout << "hash hit: " << HashHit << endl;
+		cout << "hash hit & same turn: " << HashHitSameTurn << endl;
+		cout << "real hit: " << RealHit << endl;
+		cout << "complex: " << complex << endl;
+		//cout << "maxdepth: " << maxDepth << endl;
 	}
-	cout << " 本方為 : ";
-	if (color == 0) cout << "紅 " << endl;
-	else cout << "黑 " << endl;
+
 	createMovetxt();
-	cout << "total search: " << TotalSearch << endl;
-	cout << "hash hit: " << HashHit << endl;
-	cout << "hash hit & same turn: " << HashHitSameTurn << endl;
-	cout << "real hit: " << RealHit << endl;
-	cout << "complex: " << complex << endl;
-	//cout << "maxdepth: " << maxDepth << endl;
 }
 
 void ai2()
@@ -619,7 +625,7 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 	unsigned int hashindex = hashvalue;
 	if (hashtable[hashindex].count != 0) {
 		HashHit++;
-		if (hashtable[hashindex].depth % 2 == depth % 2) {
+		if (hashtable[hashindex].MaxMin == depth % 2) {
 			HashHitSameTurn++;
 			int temp = 0;
 			if ((curPiece[0] ^ hashtable[hashindex].curPiece[0]) | (curPiece[7] ^ hashtable[hashindex].curPiece[7])) {
@@ -633,31 +639,11 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 			}*/
 			if (temp == 0) {
 				RealHit++;
-				if (hashtable[hashindex].depth < depth) {
-					return hashtable[hashindex].count - (depth - hashtable[hashindex].depth);
+				if (hashtable[hashindex].depth > maxDepth -depth) {
+					return hashtable[hashindex].count - hashtable[hashindex].depth;
 				}
 				else {
-					if (depth % 2 == 0) {//max
-						alpha = hashtable[hashindex].count;
-					}
-					else {//min
-						beta = hashtable[hashindex].count;
-					}
-					if (beta <= alpha)
-					{
-						if (depth % 2 == 0) {//max
-							hashtable[hashindex].depth = depth;
-							hashtable[hashindex].count = alpha;
-							memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
-							return alpha;
-						}
-						else {//min
-							hashtable[hashindex].depth = depth;
-							hashtable[hashindex].count = beta;
-							memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
-							return beta;
-						}
-					}
+
 				}
 			}
 		}
@@ -750,13 +736,15 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 		if (beta <= alpha)
 		{
 			if (depth % 2 == 0) {//max
-				hashtable[hashindex].depth = depth;
+				hashtable[hashindex].MaxMin = 0;
+				hashtable[hashindex].depth = maxDepth - depth;
 				hashtable[hashindex].count = alpha;
 				memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
 				return alpha;
 			}
 			else {//min
-				hashtable[hashindex].depth = depth;
+				hashtable[hashindex].MaxMin = 1;
+				hashtable[hashindex].depth = maxDepth - depth;
 				hashtable[hashindex].count = beta;
 				memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
 				return beta;
@@ -768,7 +756,8 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 	if (depth >= maxDepth)
 	{
 		int re = countAva(curPie, depth, curPiece);
-		hashtable[hashindex].depth = depth;
+		hashtable[hashindex].MaxMin = depth % 2;
+		hashtable[hashindex].depth = maxDepth - depth;
 		hashtable[hashindex].count = re;
 		memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
 		return re;
@@ -834,13 +823,15 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 		if (beta <= alpha)
 		{
 			if (depth % 2 == 0) {//max
-				hashtable[hashindex].depth = depth;
+				hashtable[hashindex].MaxMin = 0;
+				hashtable[hashindex].depth = maxDepth - depth;
 				hashtable[hashindex].count = alpha;
 				memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
 				return alpha;
 			}
 			else {//min
-				hashtable[hashindex].depth = depth;
+				hashtable[hashindex].MaxMin = 1;
+				hashtable[hashindex].depth = maxDepth - depth;
 				hashtable[hashindex].count = beta;
 				memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
 				return beta;
@@ -905,13 +896,15 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 				if (beta <= alpha)
 				{
 					if (depth % 2 == 0) {//max
-						hashtable[hashindex].depth = depth;
+						hashtable[hashindex].MaxMin = 0;
+						hashtable[hashindex].depth = maxDepth - depth;
 						hashtable[hashindex].count = alpha;
 						memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
 						return alpha;
 					}
 					else {//min
-						hashtable[hashindex].depth = depth;
+						hashtable[hashindex].MaxMin = 1;
+						hashtable[hashindex].depth = maxDepth - depth;
 						hashtable[hashindex].count = beta;
 						memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
 						return beta;
@@ -984,7 +977,8 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 	}
 	if (wp == 0) best = countAva(curPie, depth, curPiece);
 	if (best == 9999999 || best == -9999999) best = countAva(curPie, depth, curPiece);
-	hashtable[hashindex].depth = depth;
+	hashtable[hashindex].MaxMin = depth % 2;
+	hashtable[hashindex].depth = maxDepth - depth;
 	hashtable[hashindex].count = best;
 	memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
 	return best;
