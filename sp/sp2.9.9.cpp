@@ -13,7 +13,7 @@
 
 using namespace std;
 /*	
-	動態查表完成 距離查表完成
+	動態深度 超時回傳深度減一結果 (10秒或20層)
 */
 
 
@@ -110,12 +110,14 @@ int TotalSearch = 0;
 int HashHit = 0;
 int RealHit = 0;
 int HashHitSameTurn = 0;
-int Power[2][3][3][3][3][3][6][7];//all possible power
-int DistanceP[32][32][7][7];
+int Power[2][3][3][3][3][3][6][7];//動態棋力查表分數
+int DistanceP[32][32][7][7];//距離查表分數
+clock_t start, stop;//程式執行時間
+int TimeOut;//是否超時
+int TimeLimit = 10000;//時間限制10秒
 
 int main()
 {
-	clock_t start, stop;
 	start = clock();
 	srand(time(NULL));
 	initial();//初始化 
@@ -135,7 +137,7 @@ int main()
 	if (onboardi == 0)maxDepth = 10;
 	complex = onboardi * onboardpi + LivePieces;
 	//if (onboardi <=27)maxDepth = (1000 - complex) / 100;
-	for (maxDepth = 4; (double(stop - start) < 7000 && maxDepth < 21); maxDepth++) {
+	for (maxDepth = 4; (double(stop - start) < TimeLimit && maxDepth < 21); maxDepth++) {
 		TotalSearch = 0;
 		HashHit = 0;
 		HashHitSameTurn = 0;
@@ -621,6 +623,11 @@ int countAva(int pie[14], int deep, unsigned int curPiece[16])//將士相車馬炮兵
 
 int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int beta, unsigned int hashvalue)
 {
+	if (double(stop - start) > TimeLimit) {
+		TimeOut = 1;
+		return 0;
+	}
+	stop = clock();
 	TotalSearch++;
 	unsigned int hashindex = hashvalue;
 	if (hashtable[hashindex].count != 0) {
@@ -923,6 +930,9 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 
 	if (depth == 0)//max
 	{
+		if (TimeOut == 1) {
+			return 0;
+		}
 		cout << endl << "------------------------------------" << endl;
 		int recordi = 0;
 		for (int i = wp - 1; i >= 0; i--)
