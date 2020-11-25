@@ -12,7 +12,7 @@
 #include <map>
 
 using namespace std;
-/*	
+/*
 	同型表淺層紀錄最佳步優先搜尋+動態深度(未使用)
 */
 
@@ -102,7 +102,7 @@ unsigned int randtable[15][32]; //0~13 為雙方兵種 14 未翻
 
 struct hashdata {
 	int count; int depth; unsigned int curPiece[16];
-	unsigned int NextCurPiece[2]; unsigned int NextHashvalue; int MaxDepth; int NextCurPie;
+	unsigned int NextCurPiece[4]; unsigned int NextHashvalue; int MaxDepth; int NextCurPie;
 };
 unordered_map<unsigned int, hashdata > hashtable;
 unordered_map<unsigned int, hashdata > hashtablef;
@@ -132,7 +132,7 @@ int test7 = 0;
 int test8 = 0;
 
 
-int main(){
+int main() {
 
 	start = clock();
 	srand(time(NULL));
@@ -192,15 +192,6 @@ int main(){
 		cout << "MoreDepth: " << MoreDepth << endl;
 		cout << "LessDepth: " << LessDepth << endl;
 		cout << "NoUseHash: " << NoUseHash << endl;
-		cout << "test: " << test << endl;
-		cout << "test1: " << test1 << endl;
-		cout << "test2: " << test2 << endl;
-		cout << "test3: " << test3 << endl;
-		cout << "test4: " << test4 << endl;
-		cout << "test5: " << test5 << endl;
-		cout << "test6: " << test6 << endl;
-		cout << "test7: " << test7 << endl;
-		cout << "test8: " << test8 << endl;
 		//cout << "maxdepth: " << maxDepth << endl;
 		TimeLimit = 1;
 	}
@@ -525,7 +516,7 @@ int countAva(int pie[14], int deep, unsigned int curPiece[16])//將士相車馬炮兵
 		}
 		for (int i = 7; i < 14; i++)
 		{
-			power -= pie[i] * Power[pie[0]][pie[1]][pie[2]][pie[3]][pie[4]][pie[5]][pie[6]][i-7];
+			power -= pie[i] * Power[pie[0]][pie[1]][pie[2]][pie[3]][pie[4]][pie[5]][pie[6]][i - 7];
 			blackleft += pie[i];
 		}
 		if (redleft == 0) power = -100000 + deep * 1000;
@@ -655,6 +646,8 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 	unsigned int hashindex = hashvalue;
 	int tempscore = 0;
 	int HashCheck = 0;
+	unsigned int HashTempC1;
+	unsigned int HashTempC2;
 	//if (maxDepth == 7)cout << "!" << endl;
 	if (hashtable[hashindex].count != 0) {
 		HashHit++;
@@ -684,10 +677,10 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 
 					if (depth > noReDepth && hashtable[hashindex].NextHashvalue) {
 						MoreDepth++;
-						int legal = 0;
+						/*int legal = 0;
 						chess(curPiece, depth);
 						for (int i = 0; i < AEMindex; i++) {
-							if (1<<allEatMove[i][0] == hashtable[hashindex].NextCurPiece[0] && 1 << allEatMove[i][1] == hashtable[hashindex].NextCurPiece[1]) {
+							if (1 << allEatMove[i][0] == hashtable[hashindex].NextCurPiece[0] && 1 << allEatMove[i][1] == hashtable[hashindex].NextCurPiece[1]) {
 								legal = 1;
 								break;
 							}
@@ -697,9 +690,9 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 								legal = 2;
 								break;
 							}
-						}
+						}*/
 
-						int c1p, c2p = -1;
+						/*int c1p, c2p = -1;
 						for (int ii = 1; ii < 15; ii++) {//找到c1 放入c1p
 							unsigned int check = curPiece[ii] & hashtable[hashindex].NextCurPiece[0];
 							if (check != 0) {
@@ -713,11 +706,11 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 								c2p = ii;
 								break;
 							}
-						}
+						}*/
 						/*if (c1p == -1 || (c2p == -1 && hashtable[hashindex].NextCurPie != -1) || legal==0) {
 							test++;
 						}*/
-						if (legal == 0) {
+						if (0) {
 							/*cout << endl;
 							cout << "legal: " << legal << endl;
 							cout << "depth: " << depth << "hash depth: " << hashtable[hashindex].depth << endl;
@@ -765,17 +758,20 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 								}
 								if (tempxx == 1)break;
 							}*/
-							if (legal==1) {//sim
+							int tempNextCurPie = hashtable[hashindex].NextCurPie;
+							int tempc1p = hashtable[hashindex].NextCurPiece[2];
+							int tempc2p = hashtable[hashindex].NextCurPiece[3];
+							if (tempNextCurPie !=-1) {//sim
 								/*curPiece[c1p] ^= c1;//清除原位置c1
 								curPiece[c1p] |= c2;//移動
 								curPiece[0] |= c1;//空格+c1
 								curPiece[c2p] ^= c2;//清除原位置c2
 								curPie[c2p - 1]--;*/
-								curPiece[c1p] ^= hashtable[hashindex].NextCurPiece[0];//清除原位置c1
-								curPiece[c1p] |= hashtable[hashindex].NextCurPiece[1];//移動
+								curPiece[hashtable[hashindex].NextCurPiece[2]] ^= hashtable[hashindex].NextCurPiece[0];//清除原位置c1
+								curPiece[hashtable[hashindex].NextCurPiece[2]] |= hashtable[hashindex].NextCurPiece[1];//移動
 								curPiece[0] |= hashtable[hashindex].NextCurPiece[0];//空格+c1
-								curPiece[c2p] ^= hashtable[hashindex].NextCurPiece[1];//清除原位置c2
-								curPie[c2p-1]--;
+								curPiece[hashtable[hashindex].NextCurPiece[3]] ^= hashtable[hashindex].NextCurPiece[1];//清除原位置c2
+								curPie[hashtable[hashindex].NextCurPie]--;
 								//cout << "1" << endl;
 							}
 							else {
@@ -783,8 +779,8 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 								curPiece[c1p] |= c2;//移動
 								curPiece[0] |= c1;//空格+c1
 								curPiece[0] ^= c2;//空格-c2*/
-								curPiece[c1p] ^= hashtable[hashindex].NextCurPiece[0];//清除原位置c1
-								curPiece[c1p] |= hashtable[hashindex].NextCurPiece[1];//移動
+								curPiece[hashtable[hashindex].NextCurPiece[2]] ^= hashtable[hashindex].NextCurPiece[0];//清除原位置c1
+								curPiece[hashtable[hashindex].NextCurPiece[2]] |= hashtable[hashindex].NextCurPiece[1];//移動
 								curPiece[0] |= hashtable[hashindex].NextCurPiece[0];//空格+c1
 								curPiece[0] ^= hashtable[hashindex].NextCurPiece[1];//空格-c2
 								//cout << "2" << endl;
@@ -822,31 +818,31 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 							}
 							cout << endl;*/
 							//system("pause");
-							unsigned int tempc1 = hashtable[hashindex].NextCurPiece[0];
-							unsigned int tempc2 = hashtable[hashindex].NextCurPiece[1];
+							HashTempC1 = hashtable[hashindex].NextCurPiece[0];
+							HashTempC2 = hashtable[hashindex].NextCurPiece[1];
 							tempscore = search(depth + 1, curPiece, curPie, alpha, beta, hashtable[hashindex].NextHashvalue);
 
-							if (legal == 1) {//unsim
+							if (tempNextCurPie != -1) {//unsim
 								/*curPiece[c1p] ^= c2;//清除原位置c2
 								curPiece[c1p] |= c1;//移動
 								curPiece[0] ^= c1;//空格-c1
 								curPiece[c2p] |= c2;//回原位置c2
 								curPie[c2p - 1]++;*/
-								curPiece[c1p] ^= tempc2;//清除原位置c2
-								curPiece[c1p] |= tempc1;//移動
-								curPiece[0] ^= tempc1;//空格-c1
-								curPiece[c2p] |= tempc2;//回原位置c2
-								curPie[c2p-1]++;
+								curPiece[tempc1p] ^= HashTempC2;//清除原位置c2
+								curPiece[tempc1p] |= HashTempC1;//移動
+								curPiece[0] ^= HashTempC1;//空格-c1
+								curPiece[tempc2p] |= HashTempC2;//回原位置c2
+								curPie[tempNextCurPie]++;
 							}
 							else {
 								/*curPiece[c1p] ^= c2;//清除原位置c2
 								curPiece[0] |= c2;//空格+c2
 								curPiece[c1p] |= c1;//移動
 								curPiece[0] ^= c1;//空格-c1*/
-								curPiece[c1p] ^= tempc2;//清除原位置c2
-								curPiece[0] |= tempc2;//空格+c2
-								curPiece[c1p] |= tempc1;//移動
-								curPiece[0] ^= tempc1;//空格-c1
+								curPiece[tempc1p] ^= HashTempC2;//清除原位置c2
+								curPiece[0] |= HashTempC2;//空格+c2
+								curPiece[tempc1p] |= HashTempC1;//移動
+								curPiece[0] ^= HashTempC1;//空格-c1
 							}
 
 							/*for (int i = 0; i < 16; i++) {
@@ -910,13 +906,15 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 				memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
 			}
 		}
+		else {//層數不同
+		hashtable[hashindex].NextHashvalue = 0;
+		memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
+		}
 	}
-	else {
+	else {//新盤面
 		memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
 	}
 	//if (maxDepth == 7)cout << "!!!!" << endl;
-	hashtable[hashindex].depth = depth;
-	hashtable[hashindex].MaxDepth = maxDepth;
 	chess(curPiece, depth);
 	unsigned int taEM[50][2];//存可吃子的方法 0 src 1 dst 避免被往下搜尋時刷掉
 	int tAEMi = AEMindex;//alleatmove index
@@ -965,7 +963,7 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 			cout << endl;
 			cout << "err1 c1: " << hex << c1 << " c2: " << c2 << endl;
 			for (int j = 0; j < 16; j++) {
-				cout <<hex<< curPiece[j] <<dec<< endl;
+				cout << hex << curPiece[j] << dec << endl;
 			}
 			cout << "depth: " << depth << endl;
 			cout << endl;
@@ -977,11 +975,13 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 		curPie[c2p - 1]--;
 		unsigned int tempc1 = c1;
 		unsigned int tempc2 = c2;
+		unsigned int tempc1p = c1p;
+		unsigned int tempc2p = c2p;
 		int tempNextCurPie = c2p - 1;
 		unsigned int tempNextHashvalue = hashvalue ^ randtable[c1p - 1][GetIndex(c1)] ^ randtable[c2p - 1][GetIndex(c2)] ^ randtable[c1p - 1][GetIndex(c2)];
-		
+
 		if (HashCheck == 1) {
-			if (c1 == hashtable[hashindex].NextCurPiece[0] && c2 == hashtable[hashindex].NextCurPiece[1]) {
+			if (c1 == HashTempC1 && c2 == HashTempC2) {
 				curPiece[c1p] ^= c2;//清除原位置c2
 				curPiece[c1p] |= c1;//移動
 				curPiece[0] ^= c1;//空格-c1
@@ -1000,7 +1000,7 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 			int r = rand() % 6;;
 			string a[6] = { "⊙3⊙","(--;)","(〃ω〃)","(’-_-`)","|ω˙）","(*≧艸≦)" };
 			cout << a[r] + ".";
-		} 
+		}
 		curPiece[c1p] ^= c2;//清除原位置c2
 		curPiece[c1p] |= c1;//移動
 		curPiece[0] ^= c1;//空格-c1
@@ -1019,6 +1019,8 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 				best = weight[wp];
 				hashtable[hashindex].NextCurPiece[0] = tempc1;
 				hashtable[hashindex].NextCurPiece[1] = tempc2;
+				hashtable[hashindex].NextCurPiece[2] = tempc1p;
+				hashtable[hashindex].NextCurPiece[3] = tempc2p;
 				hashtable[hashindex].NextCurPie = tempNextCurPie;
 				hashtable[hashindex].NextHashvalue = tempNextHashvalue;
 			}
@@ -1034,12 +1036,16 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 				best = weight[wp];
 				hashtable[hashindex].NextCurPiece[0] = tempc1;
 				hashtable[hashindex].NextCurPiece[1] = tempc2;
+				hashtable[hashindex].NextCurPiece[2] = tempc1p;
+				hashtable[hashindex].NextCurPiece[3] = tempc2p;
 				hashtable[hashindex].NextCurPie = tempNextCurPie;
 				hashtable[hashindex].NextHashvalue = tempNextHashvalue;
 			}
 		}
 		if (beta <= alpha)
 		{
+			hashtable[hashindex].depth = depth;
+			hashtable[hashindex].MaxDepth = maxDepth;
 			if (depth % 2 == 0) {//max
 				hashtable[hashindex].count = alpha;
 				return alpha;
@@ -1056,7 +1062,8 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 	{
 		int re = countAva(curPie, depth, curPiece);
 		hashtable[hashindex].count = re;
-		
+		hashtable[hashindex].depth = depth;
+		hashtable[hashindex].MaxDepth = maxDepth;
 		return re;
 	}
 
@@ -1091,12 +1098,13 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 
 		unsigned int tempc1 = c1;
 		unsigned int tempc2 = c2;
+		unsigned int tempc1p = c1p;
 		int tempNextCurPie = -1;
 		unsigned int tempNextHashvalue = hashvalue ^ randtable[c1p - 1][GetIndex(c1)] ^ randtable[c1p - 1][GetIndex(c2)];
 
 
-		if (HashCheck == 1 ) {
-			if (c1 == hashtable[hashindex].NextCurPiece[0] && c2 == hashtable[hashindex].NextCurPiece[1]) {
+		if (HashCheck == 1) {
+			if (c1 == HashTempC1 && c2 == HashTempC2) {
 				curPiece[c1p] ^= c2;//清除原位置c2
 				curPiece[0] |= c2;//空格+c2
 				curPiece[c1p] |= c1;//移動
@@ -1130,6 +1138,7 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 				best = weight[wp];
 				hashtable[hashindex].NextCurPiece[0] = tempc1;
 				hashtable[hashindex].NextCurPiece[1] = tempc2;
+				hashtable[hashindex].NextCurPiece[2] = tempc1p;
 				hashtable[hashindex].NextCurPie = tempNextCurPie;
 				hashtable[hashindex].NextHashvalue = tempNextHashvalue;
 			}
@@ -1145,6 +1154,7 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 				best = weight[wp];
 				hashtable[hashindex].NextCurPiece[0] = tempc1;
 				hashtable[hashindex].NextCurPiece[1] = tempc2;
+				hashtable[hashindex].NextCurPiece[2] = tempc1p;
 				hashtable[hashindex].NextCurPie = tempNextCurPie;
 				hashtable[hashindex].NextHashvalue = tempNextHashvalue;
 			}
@@ -1155,6 +1165,8 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 		}
 		if (beta <= alpha)
 		{
+			hashtable[hashindex].depth = depth;
+			hashtable[hashindex].MaxDepth = maxDepth;
 			if (depth % 2 == 0) {//max
 				hashtable[hashindex].count = alpha;
 				return alpha;
@@ -1222,6 +1234,8 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 				}
 				if (beta <= alpha)
 				{
+					hashtable[hashindex].depth = depth;
+					hashtable[hashindex].MaxDepth = maxDepth;
 					if (depth % 2 == 0) {//max
 						hashtable[hashindex].count = alpha;
 						return alpha;
@@ -1265,13 +1279,13 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 
 		if (draw == 1)
 		{
-			int loseOne=0;
+			int loseOne = 0;
 			unsigned int c1 = 1 << srci;
 			for (int ii = 1; ii < 15; ii++) {//找兵種
 				unsigned int check = curPiece[ii] & c1;
 				if (check != 0) {
 					if (ii < 8) {
-						loseOne = Power[curPie[7]][curPie[8]][curPie[9]][curPie[10]][curPie[11]][curPie[12]][curPie[13]][ii-1];
+						loseOne = Power[curPie[7]][curPie[8]][curPie[9]][curPie[10]][curPie[11]][curPie[12]][curPie[13]][ii - 1];
 					}
 					else {
 						loseOne = Power[curPie[0]][curPie[1]][curPie[2]][curPie[3]][curPie[4]][curPie[5]][curPie[6]][ii - 8];
@@ -1280,7 +1294,7 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 				}
 			}
 
-			if (best- loseOne < 0); //可能輸 故意平手? 
+			if (best - loseOne < 0); //可能輸 故意平手? 
 			else if (srci == past_walk[1][1] && dsti == past_walk[1][0])
 			{
 				cout << "draw denied" << endl;
@@ -1302,6 +1316,8 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 	if (wp == 0) best = countAva(curPie, depth, curPiece);
 	if (best == 9999999 || best == -9999999) best = countAva(curPie, depth, curPiece);
 	hashtable[hashindex].count = best;
+	hashtable[hashindex].depth = depth;
+	hashtable[hashindex].MaxDepth = maxDepth;
 	return best;
 }
 
