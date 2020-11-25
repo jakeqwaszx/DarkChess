@@ -159,6 +159,7 @@ int main() {
 	if (piece[15] == 0xffffffff)
 	{
 		IndexToBoard(9, 9);
+		createMovetxt();
 		return 0;
 	}
 	while (open)
