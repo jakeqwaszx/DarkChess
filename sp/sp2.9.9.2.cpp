@@ -123,6 +123,14 @@ int TimeLimit;//時間限制
 
 int test = 0;
 int test1 = 0;
+int test2 = 0;
+int test3 = 0;
+int test4 = 0;
+int test5 = 0;
+int test6 = 0;
+int test7 = 0;
+int test8 = 0;
+
 
 int main(){
 
@@ -186,6 +194,13 @@ int main(){
 		cout << "NoUseHash: " << NoUseHash << endl;
 		cout << "test: " << test << endl;
 		cout << "test1: " << test1 << endl;
+		cout << "test2: " << test2 << endl;
+		cout << "test3: " << test3 << endl;
+		cout << "test4: " << test4 << endl;
+		cout << "test5: " << test5 << endl;
+		cout << "test6: " << test6 << endl;
+		cout << "test7: " << test7 << endl;
+		cout << "test8: " << test8 << endl;
 		//cout << "maxdepth: " << maxDepth << endl;
 		TimeLimit = 1;
 	}
@@ -669,18 +684,21 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 
 					if (depth > noReDepth && hashtable[hashindex].NextHashvalue) {
 						MoreDepth++;
-						/*int legal = 0;
+						int legal = 0;
 						chess(curPiece, depth);
 						for (int i = 0; i < AEMindex; i++) {
-							if (allEatMove[i][0] == hashtable[hashindex].NextCurPiece[0] && allEatMove[i][1] == hashtable[hashindex].NextCurPiece[1]) {
+							if (1<<allEatMove[i][0] == hashtable[hashindex].NextCurPiece[0] && 1 << allEatMove[i][1] == hashtable[hashindex].NextCurPiece[1]) {
 								legal = 1;
+								break;
 							}
 						}
 						for (int i = 0; i < AOMindex; i++) {
-							if (allOnlyMove[i][0] == hashtable[hashindex].NextCurPiece[0] && allOnlyMove[i][1] == hashtable[hashindex].NextCurPiece[1]) {
+							if (1 << allOnlyMove[i][0] == hashtable[hashindex].NextCurPiece[0] && 1 << allOnlyMove[i][1] == hashtable[hashindex].NextCurPiece[1]) {
 								legal = 2;
+								break;
 							}
-						}*/
+						}
+
 						int c1p, c2p = -1;
 						for (int ii = 1; ii < 15; ii++) {//找到c1 放入c1p
 							unsigned int check = curPiece[ii] & hashtable[hashindex].NextCurPiece[0];
@@ -696,13 +714,58 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 								break;
 							}
 						}
-						if (c1p == -1 || (c2p == -1 && hashtable[hashindex].NextCurPie != -1)) {
+						/*if (c1p == -1 || (c2p == -1 && hashtable[hashindex].NextCurPie != -1) || legal==0) {
+							test++;
+						}*/
+						if (legal == 0) {
+							/*cout << endl;
+							cout << "legal: " << legal << endl;
+							cout << "depth: " << depth << "hash depth: " << hashtable[hashindex].depth << endl;
+							cout << "color: " << color << endl;
+							for (int j = 0; j < 16; j++) {
+								cout << hex << curPiece[j] << dec << endl;
+							}
+							cout << hex << "c1: " << hashtable[hashindex].NextCurPiece[0] << " c2: " << hashtable[hashindex].NextCurPiece[1] << dec << endl;
+							for (int i = 0; i < AEMindex; i++) {
+								cout << i << hex << " allEatMove[i][0]: " << (1 << allEatMove[i][0]) << " allEatMove[i][1]: " << (1 << allEatMove[i][1]) << dec << endl;
+							}
+							for (int i = 0; i < AOMindex; i++) {
+								cout << i << hex << " allOnlyMove[i][0]: " << (1 << allOnlyMove[i][0]) << " allOnlyMove[i][1]: " << (1 << allOnlyMove[i][1]) << dec << endl;
+							}
+							cout << endl;*/
 							test++;
 						}
 						else {
+							/*cout << endl;
+							cout << "legal: " << legal << endl;
+							cout << "depth: " << depth << "hash depth: " << hashtable[hashindex].depth << endl;
+							cout << "color: " << color << endl;
+							for (int j = 0; j < 16; j++) {
+								cout << hex << curPiece[j] << dec << endl;
+							}
+							cout << hex << "c1: " << hashtable[hashindex].NextCurPiece[0] << " c2: " << hashtable[hashindex].NextCurPiece[1] << dec << endl;
+							for (int i = 0; i < AEMindex; i++) {
+								cout << i << hex << " allEatMove[i][0]: " << (1 << allEatMove[i][0]) << " allEatMove[i][1]: " << (1 << allEatMove[i][1]) << dec << endl;
+							}
+							for (int i = 0; i < AOMindex; i++) {
+								cout << i << hex << " allOnlyMove[i][0]: " << (1 << allOnlyMove[i][0]) << " allOnlyMove[i][1]: " << (1 << allOnlyMove[i][1]) << dec << endl;
+							}
+							cout << endl;*/
 							test1++;
 							HashCheck = 1;
-							if (c2p == -1) {//sim
+							/*int tempxx = 0;
+							for (int i = 0; i < 16; i++) {
+								for (int j = i + 1; j < 16; j++) {
+									if (curPiece[i] & curPiece[j]) {
+										test2++;
+										cout << "1" << endl;
+										tempxx = 1;
+										break;
+									}
+								}
+								if (tempxx == 1)break;
+							}*/
+							if (legal==1) {//sim
 								/*curPiece[c1p] ^= c1;//清除原位置c1
 								curPiece[c1p] |= c2;//移動
 								curPiece[0] |= c1;//空格+c1
@@ -713,6 +776,7 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 								curPiece[0] |= hashtable[hashindex].NextCurPiece[0];//空格+c1
 								curPiece[c2p] ^= hashtable[hashindex].NextCurPiece[1];//清除原位置c2
 								curPie[c2p-1]--;
+								//cout << "1" << endl;
 							}
 							else {
 								/*curPiece[c1p] ^= c1;//清除原位置c1
@@ -723,20 +787,55 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 								curPiece[c1p] |= hashtable[hashindex].NextCurPiece[1];//移動
 								curPiece[0] |= hashtable[hashindex].NextCurPiece[0];//空格+c1
 								curPiece[0] ^= hashtable[hashindex].NextCurPiece[1];//空格-c2
+								//cout << "2" << endl;
 							}
 
+							/*for (int i = 0; i < 16; i++) {
+								int ttempxx = test3;
+								for (int j = i + 1; j < 16; j++) {
+									if (curPiece[i] & curPiece[j]) {
+										test3++;
+										if (tempxx == 0) {
+											tempxx = 2;
+											test5++;
+										}
+										cout << "2" << endl;
+										break;
+									}
+								}
+								if (test3 != ttempxx)break;
+							}*/
+
+							/*cout << endl;
+							cout << "legal: " << legal << endl;
+							cout << "depth: " << depth << "hash depth: " << hashtable[hashindex].depth << endl;
+							cout << "color: " << color << endl;
+							for (int j = 0; j < 16; j++) {
+								cout << hex << curPiece[j] << dec << endl;
+							}
+							cout << hex << "c1: " << hashtable[hashindex].NextCurPiece[0] << " c2: " << hashtable[hashindex].NextCurPiece[1] << dec << endl;
+							for (int i = 0; i < AEMindex; i++) {
+								cout << i << hex << " allEatMove[i][0]: " << (1 << allEatMove[i][0]) << " allEatMove[i][1]: " << (1 << allEatMove[i][1]) << dec << endl;
+							}
+							for (int i = 0; i < AOMindex; i++) {
+								cout << i << hex << " allOnlyMove[i][0]: " << (1 << allOnlyMove[i][0]) << " allOnlyMove[i][1]: " << (1 << allOnlyMove[i][1]) << dec << endl;
+							}
+							cout << endl;*/
+							//system("pause");
+							unsigned int tempc1 = hashtable[hashindex].NextCurPiece[0];
+							unsigned int tempc2 = hashtable[hashindex].NextCurPiece[1];
 							tempscore = search(depth + 1, curPiece, curPie, alpha, beta, hashtable[hashindex].NextHashvalue);
 
-							if (c2p == -1) {//unsim
+							if (legal == 1) {//unsim
 								/*curPiece[c1p] ^= c2;//清除原位置c2
 								curPiece[c1p] |= c1;//移動
 								curPiece[0] ^= c1;//空格-c1
 								curPiece[c2p] |= c2;//回原位置c2
 								curPie[c2p - 1]++;*/
-								curPiece[c1p] ^= hashtable[hashindex].NextCurPiece[1];//清除原位置c2
-								curPiece[c1p] |= hashtable[hashindex].NextCurPiece[0];//移動
-								curPiece[0] ^= hashtable[hashindex].NextCurPiece[0];//空格-c1
-								curPiece[c2p] |= hashtable[hashindex].NextCurPiece[1];//回原位置c2
+								curPiece[c1p] ^= tempc2;//清除原位置c2
+								curPiece[c1p] |= tempc1;//移動
+								curPiece[0] ^= tempc1;//空格-c1
+								curPiece[c2p] |= tempc2;//回原位置c2
 								curPie[c2p-1]++;
 							}
 							else {
@@ -744,11 +843,32 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 								curPiece[0] |= c2;//空格+c2
 								curPiece[c1p] |= c1;//移動
 								curPiece[0] ^= c1;//空格-c1*/
-								curPiece[c1p] ^= hashtable[hashindex].NextCurPiece[1];//清除原位置c2
-								curPiece[0] |= hashtable[hashindex].NextCurPiece[1];//空格+c2
-								curPiece[c1p] |= hashtable[hashindex].NextCurPiece[0];//移動
-								curPiece[0] ^= hashtable[hashindex].NextCurPiece[0];//空格-c1
+								curPiece[c1p] ^= tempc2;//清除原位置c2
+								curPiece[0] |= tempc2;//空格+c2
+								curPiece[c1p] |= tempc1;//移動
+								curPiece[0] ^= tempc1;//空格-c1
 							}
+
+							/*for (int i = 0; i < 16; i++) {
+								int ttempxx = test4;
+								for (int j = i + 1; j < 16; j++) {
+									if (curPiece[i] & curPiece[j]) {
+										test4++;
+										if (tempxx == 0) {
+											test6++;
+										}
+										if (tempxx == 1) {
+											test7++;
+										}
+										if (tempxx == 2) {
+											test8++;
+										}
+										cout << "3" << endl;
+										break;
+									}
+								}
+								if (test4 != ttempxx)break;
+							}*/
 
 							if (depth % 2 == 0)//max
 							{
@@ -855,12 +975,11 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 		curPiece[0] |= c1;//空格+c1
 		curPiece[c2p] ^= c2;//清除原位置c2
 		curPie[c2p - 1]--;
-		if (depth<maxDepth) {
-			hashtable[hashindex].NextCurPiece[0] = c1;
-			hashtable[hashindex].NextCurPiece[1] = c2;
-			hashtable[hashindex].NextCurPie = c2p - 1;
-			hashtable[hashindex].NextHashvalue = hashvalue ^ randtable[c1p - 1][GetIndex(c1)] ^ randtable[c2p - 1][GetIndex(c2)] ^ randtable[c1p - 1][GetIndex(c2)];
-		}
+		unsigned int tempc1 = c1;
+		unsigned int tempc2 = c2;
+		int tempNextCurPie = c2p - 1;
+		unsigned int tempNextHashvalue = hashvalue ^ randtable[c1p - 1][GetIndex(c1)] ^ randtable[c2p - 1][GetIndex(c2)] ^ randtable[c1p - 1][GetIndex(c2)];
+		
 		if (HashCheck == 1) {
 			if (c1 == hashtable[hashindex].NextCurPiece[0] && c2 == hashtable[hashindex].NextCurPiece[1]) {
 				curPiece[c1p] ^= c2;//清除原位置c2
@@ -898,6 +1017,10 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 			if (weight[wp] > best)
 			{
 				best = weight[wp];
+				hashtable[hashindex].NextCurPiece[0] = tempc1;
+				hashtable[hashindex].NextCurPiece[1] = tempc2;
+				hashtable[hashindex].NextCurPie = tempNextCurPie;
+				hashtable[hashindex].NextHashvalue = tempNextHashvalue;
 			}
 		}
 		else//min
@@ -909,6 +1032,10 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 			if (weight[wp] < best)
 			{
 				best = weight[wp];
+				hashtable[hashindex].NextCurPiece[0] = tempc1;
+				hashtable[hashindex].NextCurPiece[1] = tempc2;
+				hashtable[hashindex].NextCurPie = tempNextCurPie;
+				hashtable[hashindex].NextHashvalue = tempNextHashvalue;
 			}
 		}
 		if (beta <= alpha)
@@ -962,10 +1089,10 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 		curPiece[0] |= c1;//空格+c1
 		curPiece[0] ^= c2;//空格-c2
 
-		hashtable[hashindex].NextCurPiece[0] = c1;
-		hashtable[hashindex].NextCurPiece[1] = c2;
-		hashtable[hashindex].NextCurPie = -1;
-		hashtable[hashindex].NextHashvalue = hashvalue ^ randtable[c1p - 1][GetIndex(c1)] ^ randtable[c1p - 1][GetIndex(c2)];
+		unsigned int tempc1 = c1;
+		unsigned int tempc2 = c2;
+		int tempNextCurPie = -1;
+		unsigned int tempNextHashvalue = hashvalue ^ randtable[c1p - 1][GetIndex(c1)] ^ randtable[c1p - 1][GetIndex(c2)];
 
 
 		if (HashCheck == 1 ) {
@@ -1001,6 +1128,10 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 			if (weight[wp] > best)
 			{
 				best = weight[wp];
+				hashtable[hashindex].NextCurPiece[0] = tempc1;
+				hashtable[hashindex].NextCurPiece[1] = tempc2;
+				hashtable[hashindex].NextCurPie = tempNextCurPie;
+				hashtable[hashindex].NextHashvalue = tempNextHashvalue;
 			}
 			if (weight[wp] > alpha)
 			{
@@ -1012,6 +1143,10 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 			if (weight[wp] < best)
 			{
 				best = weight[wp];
+				hashtable[hashindex].NextCurPiece[0] = tempc1;
+				hashtable[hashindex].NextCurPiece[1] = tempc2;
+				hashtable[hashindex].NextCurPie = tempNextCurPie;
+				hashtable[hashindex].NextHashvalue = tempNextHashvalue;
 			}
 			if (weight[wp] < beta)
 			{
@@ -1424,7 +1559,7 @@ void initial()
 {
 	random_device rd;
 	default_random_engine gen = default_random_engine(rd());
-	uniform_int_distribution<unsigned int> dis(0, pow(2, 32) - 1);
+	uniform_int_distribution<unsigned int> dis(pow(2, 31), pow(2, 32) - 1);
 
 	for (int i = 0; i <= 14; i++)
 		piece[i] = 0;
