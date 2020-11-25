@@ -102,7 +102,7 @@ unsigned int randtable[15][32]; //0~13 為雙方兵種 14 未翻
 
 struct hashdata {
 	int count; int depth; unsigned int curPiece[16];
-	vector<unsigned int> NextCurPiece2; int NextCurPie; unsigned int NextHashvalue; int MaxDepth;
+	unsigned int NextCurPiece[2]; unsigned int NextHashvalue; int MaxDepth; int NextCurPie;
 };
 unordered_map<unsigned int, hashdata > hashtable;
 unordered_map<unsigned int, hashdata > hashtablef;
@@ -120,6 +120,9 @@ int DistanceP[32][32][7][7];
 clock_t start, stop;//程式執行時間
 int TimeOut;//是否超時
 int TimeLimit;//時間限制
+
+int test = 0;
+int test1 = 0;
 
 int main(){
 
@@ -181,6 +184,8 @@ int main(){
 		cout << "MoreDepth: " << MoreDepth << endl;
 		cout << "LessDepth: " << LessDepth << endl;
 		cout << "NoUseHash: " << NoUseHash << endl;
+		cout << "test: " << test << endl;
+		cout << "test1: " << test1 << endl;
 		//cout << "maxdepth: " << maxDepth << endl;
 		TimeLimit = 1;
 	}
@@ -661,75 +666,88 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 					}
 				}
 				else {
-					
+
 					if (depth > noReDepth && hashtable[hashindex].NextHashvalue) {
+						MoreDepth++;
+						/*int legal = 0;
+						chess(curPiece, depth);
+						for (int i = 0; i < AEMindex; i++) {
+							if (allEatMove[i][0] == hashtable[hashindex].NextCurPiece[0] && allEatMove[i][1] == hashtable[hashindex].NextCurPiece[1]) {
+								legal = 1;
+							}
+						}
+						for (int i = 0; i < AOMindex; i++) {
+							if (allOnlyMove[i][0] == hashtable[hashindex].NextCurPiece[0] && allOnlyMove[i][1] == hashtable[hashindex].NextCurPiece[1]) {
+								legal = 2;
+							}
+						}*/
 						int c1p, c2p = -1;
-						for (int ii = 1; ii < 15; ii++) {//找到c1 放入c1p  
-							unsigned int check = curPiece[ii] & hashtable[hashindex].NextCurPiece2[0];
+						for (int ii = 1; ii < 15; ii++) {//找到c1 放入c1p
+							unsigned int check = curPiece[ii] & hashtable[hashindex].NextCurPiece[0];
 							if (check != 0) {
 								c1p = ii;
 								break;
 							}
 						}
 						for (int ii = 1; ii < 15; ii++) {//找c2
-							unsigned int check = curPiece[ii] & hashtable[hashindex].NextCurPiece2[1];
+							unsigned int check = curPiece[ii] & hashtable[hashindex].NextCurPiece[1];
 							if (check != 0) {
 								c2p = ii;
 								break;
 							}
 						}
-						if (c2p == -1 || c1p == -1) {
-							NoUseHash++;
+						if (c1p == -1 || (c2p == -1 && hashtable[hashindex].NextCurPie != -1)) {
+							test++;
 						}
 						else {
-							MoreDepth++;
+							test1++;
 							HashCheck = 1;
-							if (hashtable[hashindex].NextCurPie != -1) {//sim
+							if (c2p == -1) {//sim
 								/*curPiece[c1p] ^= c1;//清除原位置c1
 								curPiece[c1p] |= c2;//移動
 								curPiece[0] |= c1;//空格+c1
 								curPiece[c2p] ^= c2;//清除原位置c2
 								curPie[c2p - 1]--;*/
-								curPiece[c1p] ^= hashtable[hashindex].NextCurPiece2[0];//清除原位置c1
-								curPiece[c1p] |= hashtable[hashindex].NextCurPiece2[1];//移動
-								curPiece[0] |= hashtable[hashindex].NextCurPiece2[0];//空格+c1
-								curPiece[c2p] ^= hashtable[hashindex].NextCurPiece2[1];//清除原位置c2
-								curPie[hashtable[hashindex].NextCurPie]--;
+								curPiece[c1p] ^= hashtable[hashindex].NextCurPiece[0];//清除原位置c1
+								curPiece[c1p] |= hashtable[hashindex].NextCurPiece[1];//移動
+								curPiece[0] |= hashtable[hashindex].NextCurPiece[0];//空格+c1
+								curPiece[c2p] ^= hashtable[hashindex].NextCurPiece[1];//清除原位置c2
+								curPie[c2p-1]--;
 							}
 							else {
 								/*curPiece[c1p] ^= c1;//清除原位置c1
 								curPiece[c1p] |= c2;//移動
 								curPiece[0] |= c1;//空格+c1
 								curPiece[0] ^= c2;//空格-c2*/
-								curPiece[c1p] ^= hashtable[hashindex].NextCurPiece2[0];//清除原位置c1
-								curPiece[c1p] |= hashtable[hashindex].NextCurPiece2[1];//移動
-								curPiece[0] |= hashtable[hashindex].NextCurPiece2[0];//空格+c1
-								curPiece[0] ^= hashtable[hashindex].NextCurPiece2[1];//空格-c2
+								curPiece[c1p] ^= hashtable[hashindex].NextCurPiece[0];//清除原位置c1
+								curPiece[c1p] |= hashtable[hashindex].NextCurPiece[1];//移動
+								curPiece[0] |= hashtable[hashindex].NextCurPiece[0];//空格+c1
+								curPiece[0] ^= hashtable[hashindex].NextCurPiece[1];//空格-c2
 							}
 
 							tempscore = search(depth + 1, curPiece, curPie, alpha, beta, hashtable[hashindex].NextHashvalue);
 
-							if (hashtable[hashindex].NextCurPie != -1) {//unsim
+							if (c2p == -1) {//unsim
 								/*curPiece[c1p] ^= c2;//清除原位置c2
 								curPiece[c1p] |= c1;//移動
 								curPiece[0] ^= c1;//空格-c1
 								curPiece[c2p] |= c2;//回原位置c2
 								curPie[c2p - 1]++;*/
-								curPiece[c1p] ^= hashtable[hashindex].NextCurPiece2[1];//清除原位置c1
-								curPiece[c1p] |= hashtable[hashindex].NextCurPiece2[0];//移動
-								curPiece[0] ^= hashtable[hashindex].NextCurPiece2[0];//空格+c1
-								curPiece[c2p] |= hashtable[hashindex].NextCurPiece2[1];//清除原位置c2
-								curPie[hashtable[hashindex].NextCurPie]++;
+								curPiece[c1p] ^= hashtable[hashindex].NextCurPiece[1];//清除原位置c2
+								curPiece[c1p] |= hashtable[hashindex].NextCurPiece[0];//移動
+								curPiece[0] ^= hashtable[hashindex].NextCurPiece[0];//空格-c1
+								curPiece[c2p] |= hashtable[hashindex].NextCurPiece[1];//回原位置c2
+								curPie[c2p-1]++;
 							}
 							else {
 								/*curPiece[c1p] ^= c2;//清除原位置c2
 								curPiece[0] |= c2;//空格+c2
 								curPiece[c1p] |= c1;//移動
 								curPiece[0] ^= c1;//空格-c1*/
-								curPiece[c1p] ^= hashtable[hashindex].NextCurPiece2[1];//清除原位置c1
-								curPiece[0] |= hashtable[hashindex].NextCurPiece2[1];//移動
-								curPiece[c1p] |= hashtable[hashindex].NextCurPiece2[0];//空格+c1
-								curPiece[0] ^= hashtable[hashindex].NextCurPiece2[0];//空格-c2
+								curPiece[c1p] ^= hashtable[hashindex].NextCurPiece[1];//清除原位置c2
+								curPiece[0] |= hashtable[hashindex].NextCurPiece[1];//空格+c2
+								curPiece[c1p] |= hashtable[hashindex].NextCurPiece[0];//移動
+								curPiece[0] ^= hashtable[hashindex].NextCurPiece[0];//空格-c1
 							}
 
 							if (depth % 2 == 0)//max
@@ -773,7 +791,7 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 			}
 		}
 	}
-	else{
+	else {
 		memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
 	}
 	//if (maxDepth == 7)cout << "!!!!" << endl;
@@ -825,28 +843,26 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 		}
 		if (c2p == -1 || c1p == -1) {//errrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
 			cout << endl;
-			cout << "err1 c1: " <<hex<<c1 <<" taEM[i][0]: "<< taEM[i][0] <<" c2: "<<c2 << " taEM[i][1]: " << taEM[i][1] << endl;
+			cout << "err1 c1: " << hex << c1 << " c2: " << c2 << endl;
 			for (int j = 0; j < 16; j++) {
 				cout <<hex<< curPiece[j] <<dec<< endl;
 			}
 			cout << "depth: " << depth << endl;
 			cout << endl;
 		}
-		int c2pcopy;
-		c2pcopy = c2p;
 		curPiece[c1p] ^= c1;//清除原位置c1
 		curPiece[c1p] |= c2;//移動
 		curPiece[0] |= c1;//空格+c1
 		curPiece[c2p] ^= c2;//清除原位置c2
 		curPie[c2p - 1]--;
-
-		hashtable[hashindex].NextCurPiece2.clear();
-		hashtable[hashindex].NextCurPiece2.push_back(c1);
-		hashtable[hashindex].NextCurPiece2.push_back(c2);
-		hashtable[hashindex].NextCurPie = c2p - 1;
-		hashtable[hashindex].NextHashvalue = hashvalue ^ randtable[c1p - 1][GetIndex(c1)] ^ randtable[c2p - 1][GetIndex(c2)] ^ randtable[c1p - 1][GetIndex(c2)];
+		if (depth<maxDepth) {
+			hashtable[hashindex].NextCurPiece[0] = c1;
+			hashtable[hashindex].NextCurPiece[1] = c2;
+			hashtable[hashindex].NextCurPie = c2p - 1;
+			hashtable[hashindex].NextHashvalue = hashvalue ^ randtable[c1p - 1][GetIndex(c1)] ^ randtable[c2p - 1][GetIndex(c2)] ^ randtable[c1p - 1][GetIndex(c2)];
+		}
 		if (HashCheck == 1) {
-			if (c1 == hashtable[hashindex].NextCurPiece2[0] && c2 == hashtable[hashindex].NextCurPiece2[1]) {
+			if (c1 == hashtable[hashindex].NextCurPiece[0] && c2 == hashtable[hashindex].NextCurPiece[1]) {
 				curPiece[c1p] ^= c2;//清除原位置c2
 				curPiece[c1p] |= c1;//移動
 				curPiece[0] ^= c1;//空格-c1
@@ -946,16 +962,14 @@ int search(int depth, unsigned int curPiece[16], int curPie[14], int alpha, int 
 		curPiece[0] |= c1;//空格+c1
 		curPiece[0] ^= c2;//空格-c2
 
-		hashtable[hashindex].NextCurPiece2.clear();
-		hashtable[hashindex].NextCurPiece2.push_back(c1);
-		hashtable[hashindex].NextCurPiece2.push_back(c2);
-
+		hashtable[hashindex].NextCurPiece[0] = c1;
+		hashtable[hashindex].NextCurPiece[1] = c2;
 		hashtable[hashindex].NextCurPie = -1;
 		hashtable[hashindex].NextHashvalue = hashvalue ^ randtable[c1p - 1][GetIndex(c1)] ^ randtable[c1p - 1][GetIndex(c2)];
 
 
 		if (HashCheck == 1 ) {
-			if (c1 == hashtable[hashindex].NextCurPiece2[0] && c2 == hashtable[hashindex].NextCurPiece2[1]) {
+			if (c1 == hashtable[hashindex].NextCurPiece[0] && c2 == hashtable[hashindex].NextCurPiece[1]) {
 				curPiece[c1p] ^= c2;//清除原位置c2
 				curPiece[0] |= c2;//空格+c2
 				curPiece[c1p] |= c1;//移動
