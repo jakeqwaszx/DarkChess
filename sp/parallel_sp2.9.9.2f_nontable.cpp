@@ -1048,7 +1048,7 @@ int search(int depth, vector<unsigned int>curPiece, vector<int> curPie, int alph
 				weight[wp] = 0;
 				int a = 0;
 				int tempweight = 0;
-				#pragma omp parallel  for default(none) firstprivate(curPiece,weightU) lastprivate(weightU) reduction(+:tempweight,a)     
+				#pragma omp parallel  for default(none) firstprivate(curPiece,weightU) lastprivate(weightU) reduction(+:tempweight,a)
 				for (int pID = 0; pID < 14; pID++) { //搜尋可能會翻出之子
 					if (lDCount[pID]) { //若該兵種可能被翻出
 						a += lDCount[pID];
