@@ -29,7 +29,7 @@ unsigned int CGenCR(unsigned int x);
 unsigned int CGenCL(unsigned int x);
 int BitsHash(unsigned int x) { return (x * 0x08ED2BE6) >> 27; }
 void initial();//初始化 
-void chess(vector<unsigned int> tpiece, int deep, int& AEMindex, int& AOMindex, int& EAEMindex, int& EAOMindex, unsigned int allEatMove[50][2], unsigned int allOnlyMove[50][2]);//尋找可用移動
+void chess(vector<unsigned int> tpiece, int deep, int& AEMindex, int& AOMindex, int& EAEMindex, int& EAOMindex, int allEatMove[50][2], int allOnlyMove[50][2]);//尋找可用移動
 void readBoard();//讀檔模式 讀取board.txt 把讀入檔案轉成bitboard 還沒倒著存入 
 void createMovetxt(string src, string dst, int srci, int dsti);//創造move.txt 0走步 1翻棋 
 void IndexToBoard(int indexa, int indexb, string& src, string& dst);//把src dst從編號0~31->棋盤編號a1~d4 
@@ -189,7 +189,7 @@ int main() {
 	}
 }
 
-void chess(vector<unsigned int> tpiece, int deep, int& AEMindex, int& AOMindex, int& EAEMindex, int& EAOMindex, unsigned int allEatMove[50][2], unsigned int allOnlyMove[50][2])
+void chess(vector<unsigned int> tpiece, int deep, int& AEMindex, int& AOMindex, int& EAEMindex, int& EAOMindex, int allEatMove[50][2], int allOnlyMove[50][2])
 {
 	unsigned int tred, tblack;
 	unsigned int dest;//可以吃子的行動
@@ -230,7 +230,7 @@ void chess(vector<unsigned int> tpiece, int deep, int& AEMindex, int& AOMindex, 
 				while (dest) { //如果 dest 有多個位置的話,分開存起來。
 					unsigned int mask2 = LS1B(dest);
 					dest ^= mask2;
-					unsigned int result = GetIndex(mask2);
+					int result = GetIndex(mask2);
 					allEatMove[AEMindex][0] = ssrc;
 					allEatMove[AEMindex][1] = result;
 					AEMindex++;
@@ -247,7 +247,7 @@ void chess(vector<unsigned int> tpiece, int deep, int& AEMindex, int& AOMindex, 
 				while (dest) { //如果 dest 有多個位置的話,分開存起來。
 					unsigned int mask2 = LS1B(dest);
 					dest ^= mask2;
-					unsigned int result = GetIndex(mask2);
+					int result = GetIndex(mask2);
 					allOnlyMove[AOMindex][0] = ssrc;
 					allOnlyMove[AOMindex][1] = result;
 					AOMindex++;
@@ -279,7 +279,7 @@ void chess(vector<unsigned int> tpiece, int deep, int& AEMindex, int& AOMindex, 
 				while (dest) { //對手行動存入EallEatMove 
 					unsigned int mask2 = LS1B(dest);
 					dest ^= mask2;
-					unsigned int result = GetIndex(mask2);
+					int result = GetIndex(mask2);
 					//EallEatMove[EAEMindex][0] = ssrc;
 					//EallEatMove[EAEMindex][1] = result;
 					EAEMindex++;
@@ -296,7 +296,7 @@ void chess(vector<unsigned int> tpiece, int deep, int& AEMindex, int& AOMindex, 
 				while (dest) { //如果 dest 有多個位置的話,分開存起來。
 					unsigned int mask2 = LS1B(dest);
 					dest ^= mask2;
-					unsigned int result = GetIndex(mask2);
+					int result = GetIndex(mask2);
 					//EallOnlyMove[EAOMindex][0] = ssrc;
 					//EallOnlyMove[EAOMindex][1] = result;
 					EAOMindex++;
@@ -330,7 +330,7 @@ void chess(vector<unsigned int> tpiece, int deep, int& AEMindex, int& AOMindex, 
 				while (dest) { //如果 dest 有多個位置的話,分開存起來。
 					unsigned int mask2 = LS1B(dest);
 					dest ^= mask2;
-					unsigned int result = GetIndex(mask2);
+					int result = GetIndex(mask2);
 					allEatMove[AEMindex][0] = ssrc;
 					allEatMove[AEMindex][1] = result;
 					AEMindex++;
@@ -347,7 +347,7 @@ void chess(vector<unsigned int> tpiece, int deep, int& AEMindex, int& AOMindex, 
 				while (dest) { //如果 dest 有多個位置的話,分開存起來。
 					unsigned int mask2 = LS1B(dest);
 					dest ^= mask2;
-					unsigned int result = GetIndex(mask2);
+					int result = GetIndex(mask2);
 					allOnlyMove[AOMindex][0] = ssrc;
 					allOnlyMove[AOMindex][1] = result;
 					AOMindex++;
@@ -379,7 +379,7 @@ void chess(vector<unsigned int> tpiece, int deep, int& AEMindex, int& AOMindex, 
 				while (dest) { //如果 dest 有多個位置的話,分開存起來。
 					unsigned int mask2 = LS1B(dest);
 					dest ^= mask2;
-					unsigned int result = GetIndex(mask2);
+					int result = GetIndex(mask2);
 					//EallEatMove[EAEMindex][0] = ssrc;
 					//EallEatMove[EAEMindex][1] = result;
 					EAEMindex++;
@@ -396,7 +396,7 @@ void chess(vector<unsigned int> tpiece, int deep, int& AEMindex, int& AOMindex, 
 				while (dest) { //如果 dest 有多個位置的話,分開存起來。
 					unsigned int mask2 = LS1B(dest);
 					dest ^= mask2;
-					unsigned int result = GetIndex(mask2);
+					int result = GetIndex(mask2);
 					//EallOnlyMove[EAOMindex][0] = ssrc;
 					//EallOnlyMove[EAOMindex][1] = result;
 					EAOMindex++;
@@ -756,30 +756,29 @@ int search(int depth, vector<unsigned int>curPiece, vector<int> curPie, int alph
 	else {//新盤面
 		memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
 	}*/
-	unsigned int taEM[50][2];//存可吃子的方法 0 src 1 dst 避免被往下搜尋時刷掉
-	unsigned int taOM[50][2];//存可移動非吃子的方法 0 src 1 dst
+	int taEM[50][2];//存可吃子的方法 0 src 1 dst 避免被往下搜尋時刷掉
+	int taOM[50][2];//存可移動非吃子的方法 0 src 1 dst
 	int tAEMi;//alleatmove index
 	int tAOMi;//allonlymove index
 	int tEAEMi;//allonlymove index
 	int tEAOMi;//allonlymove index
 	chess(curPiece, depth, tAEMi, tAOMi, tEAEMi, tEAOMi, taEM, taOM);//void chess(unsigned int tpiece[16], int deep,int AEMindex,int AOMindex ,int EAEMindex ,int EAOMindex , unsigned int allEatMove[50][2] , unsigned int allOnlyMove[50][2])
 
-	unsigned int weightU[100][2];//計算所有移動與翻棋的得分0src 1dst
-	int weight[100];//計算所有移動與翻棋的得分
+	vector<int> weights;//計算所有移動與翻棋的位置src
+	vector<int> weightd;//計算所有移動與翻棋的位置dst
+	vector<int> weight;//計算所有移動與翻棋的得分
 	int wp = 0;
 	int best = -9999999;
 	if (depth % 2 == 1) {
 		best = 9999999;
 	}
-
 	if (HashCheck) {
-		weight[wp] = tempscore;
+		weight.push_back(tempscore);
 		best = tempscore;
-		weightU[wp][0] = 100;
-		weightU[wp][1] = 100;
+		weights.push_back(100);
+		weightd.push_back(100);
 		wp++;
 	}
-
 	for (int i = 0; i < tAEMi; i++)//吃子
 	{
 		int deeper = depth + 1;
@@ -833,19 +832,21 @@ int search(int depth, vector<unsigned int>curPiece, vector<int> curPie, int alph
 			else {
 			}
 		}*/
-		weightU[wp][0] = taEM[i][0];
-		weightU[wp][1] = taEM[i][1];
+		weights.push_back(taEM[i][0]);
+		weightd.push_back(taEM[i][1]);
 		vector<unsigned int> tcurPiece;
 		vector<int> tcurPie;
 		vector<int> tlDCount;
 		tcurPiece.assign(curPiece.begin(), curPiece.end());
 		tcurPie.assign(curPie.begin(), curPie.end());
 		tlDCount.assign(lDCount.begin(), lDCount.end());
-		weight[wp] = search(deeper, tcurPiece, tcurPie, alpha, beta, tlDCount, hashvalue ^ randtable[c1p - 1][GetIndex(c1)] ^ randtable[c2p - 1][GetIndex(c2)] ^ randtable[c1p - 1][GetIndex(c2)]);
+		int tempweight = 0;
+		tempweight = search(deeper, tcurPiece, tcurPie, alpha, beta, tlDCount, hashvalue ^ randtable[c1p - 1][GetIndex(c1)] ^ randtable[c2p - 1][GetIndex(c2)] ^ randtable[c1p - 1][GetIndex(c2)]);
+		weight.push_back(tempweight);
 		if (depth == 0)
 		{
 			int r = rand() % 6;;
-			string a[6] = { "⊙3⊙","(--;)","(〃ω〃)","(’-_-`)","|ω˙）","(*≧艸≦)" };
+			string a[6] = { "⊙3⊙e","(--;)e","(〃ω〃)e","(’-_-`)e","|ω˙）e","(*≧艸≦)e" };
 			cout << a[r] + ".";
 		}
 		curPiece[c1p] ^= c2;//清除原位置c2
@@ -853,7 +854,6 @@ int search(int depth, vector<unsigned int>curPiece, vector<int> curPie, int alph
 		curPiece[0] ^= c1;//空格-c1
 		curPiece[c2p] |= c2;//回原位置c2
 		curPie[c2p - 1]++;
-
 
 		if (depth % 2 == 0)//max
 		{
@@ -913,7 +913,6 @@ int search(int depth, vector<unsigned int>curPiece, vector<int> curPie, int alph
 		hashtable[hashindex].MaxDepth = maxDepth;*/
 		return re;
 	}
-
 	for (int i = 0; i < tAOMi; i++)//純移動 --------------------------------------------------------------------------------------------------------
 	{
 		int deeper = depth + 1;
@@ -927,7 +926,6 @@ int search(int depth, vector<unsigned int>curPiece, vector<int> curPie, int alph
 				break;
 			}
 		}
-
 		if (c1p == -1) {//errrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
 			cout << endl;
 			cout << "err2 c1: " << hex << c1 << " c2: " << c2 << endl;
@@ -949,7 +947,6 @@ int search(int depth, vector<unsigned int>curPiece, vector<int> curPie, int alph
 		int tempNextCurPie = -1;
 		unsigned int tempNextHashvalue = hashvalue ^ randtable[c1p - 1][GetIndex(c1)] ^ randtable[c1p - 1][GetIndex(c2)];
 
-
 		/*if (HashCheck == 1) {
 			if (c1 == HashTempC1 && c2 == HashTempC2) {
 				curPiece[c1p] ^= c2;//清除原位置c2
@@ -962,19 +959,21 @@ int search(int depth, vector<unsigned int>curPiece, vector<int> curPie, int alph
 			}
 		}*/
 
-		weightU[wp][0] = taOM[i][0];
-		weightU[wp][1] = taOM[i][1];
+		weights.push_back(taOM[i][0]);
+		weightd.push_back(taOM[i][1]);
 		vector<unsigned int> tcurPiece;
 		vector<int> tcurPie;
 		vector<int> tlDCount;
 		tcurPiece.assign(curPiece.begin(), curPiece.end());
 		tcurPie.assign(curPie.begin(), curPie.end());
 		tlDCount.assign(lDCount.begin(), lDCount.end());
-		weight[wp] = search(deeper, tcurPiece, tcurPie, alpha, beta, tlDCount, hashvalue ^ randtable[c1p - 1][GetIndex(c1)] ^ randtable[c1p - 1][GetIndex(c2)]);
+		int tempweight = 0;
+		tempweight = search(deeper, tcurPiece, tcurPie, alpha, beta, tlDCount, hashvalue ^ randtable[c1p - 1][GetIndex(c1)] ^ randtable[c1p - 1][GetIndex(c2)]);
+		weight.push_back(tempweight);
 		if (depth == 0)
 		{
 			int r = rand() % 6;;
-			string a[6] = { "⊙3⊙","(--;)","(〃ω〃)","(’-_-`)","|ω˙）","(*≧艸≦)" };
+			string a[6] = { "⊙3⊙m","(--;)m","(〃ω〃)m","(’-_-`)m","|ω˙）m","(*≧艸≦)m" };
 			cout << a[r] + ".";
 		}
 		curPiece[c1p] ^= c2;//清除原位置c2
@@ -1037,18 +1036,18 @@ int search(int depth, vector<unsigned int>curPiece, vector<int> curPie, int alph
 		for (int ssrc = 0; ssrc < 32; ssrc++) { //搜尋盤面上 32 個位置
 
 
-
 			if (curPiece[15] & (1 << ssrc) && ch & (1 << ssrc) && depth <= noReDepth) { //若為未翻子 在未翻子的遮罩內 depth<=noReDepth 
 				if (depth == 0)
 				{
 					int r = rand() % 6;;
-					string a[6] = { "⊙3⊙","(--;)","(〃ω〃)","(’-_-`)","|ω˙）","(*≧艸≦)" };
+					string a[6] = { "⊙3⊙f","(--;)f","(〃ω〃)f","(’-_-`)f","|ω˙）f","(*≧艸≦)f" };
 					cout << a[r] + ".";
 				}
-				weight[wp] = 0;
 				int a = 0;
 				int tempweight = 0;
-				#pragma omp parallel  for default(none) firstprivate(curPiece,weightU) lastprivate(weightU) reduction(+:tempweight,a)
+				weights.push_back(ssrc);
+				weightd.push_back(ssrc);
+#pragma omp parallel  for default(none) firstprivate(curPiece) reduction(+:tempweight,a)     
 				for (int pID = 0; pID < 14; pID++) { //搜尋可能會翻出之子
 					if (lDCount[pID]) { //若該兵種可能被翻出
 						a += lDCount[pID];
@@ -1059,8 +1058,6 @@ int search(int depth, vector<unsigned int>curPiece, vector<int> curPie, int alph
 						curPiece[cpID] |= c;//模擬該兵種翻出來
 						curPiece[15] ^= c;
 
-						weightU[wp][0] = ssrc;
-						weightU[wp][1] = ssrc;
 						vector<unsigned int> tcurPiece;
 						vector<int> tcurPie;
 						vector<int> tlDCount;
@@ -1071,17 +1068,18 @@ int search(int depth, vector<unsigned int>curPiece, vector<int> curPie, int alph
 						int ttempweight = 0;
 
 						ttempweight = ((lDCount[pID]) * search(deeper, tcurPiece, tcurPie, -999999, 999999, tlDCount, hashvalue ^ randtable[pID][ssrc] ^ randtable[14][ssrc]));
-
 						tempweight += ttempweight;
 
 						curPiece[cpID] ^= c;//將模擬翻出的子復原
 						curPiece[15] |= c;
 					}
 				}
+				//if (weights.back() > 32)cout << weights.back() << endl;
+				//if (weightd.back() > 32)cout << weightd.back() << endl;
 
-				weight[wp] = tempweight;
+				tempweight /= a;
+				weight.push_back(tempweight);
 
-				weight[wp] /= a;
 				if (depth % 2 == 0)//max
 				{
 					if (weight[wp] > alpha)
@@ -1121,7 +1119,6 @@ int search(int depth, vector<unsigned int>curPiece, vector<int> curPie, int alph
 			}
 		}
 	}
-
 	if (curPiece[15] != 0 && depth > noReDepth)//可以走空步
 	{
 		vector<unsigned int> tcurPiece;
@@ -1130,9 +1127,17 @@ int search(int depth, vector<unsigned int>curPiece, vector<int> curPie, int alph
 		tcurPiece.assign(curPiece.begin(), curPiece.end());
 		tcurPie.assign(curPie.begin(), curPie.end());
 		tlDCount.assign(lDCount.begin(), lDCount.end());
-		weightU[wp][0] = 0; weightU[wp][1] = 0; weight[wp] = search(depth + 1, tcurPiece, tcurPie, alpha, beta, tlDCount, hashvalue);
+		weights.push_back(0);
+		weightd.push_back(0);
+		int tempweight = 0;
+		tempweight = search(depth + 1, tcurPiece, tcurPie, alpha, beta, tlDCount, hashvalue);
+		weight.push_back(tempweight);
 		wp++;
 	}
+
+	/*for (int i = 0; i < 32; i++) {
+		if (weightU[wp][0] > 32)cout << weightU[wp][0] << endl;
+	}*/
 
 	if (depth == 0)//root
 	{
@@ -1147,13 +1152,13 @@ int search(int depth, vector<unsigned int>curPiece, vector<int> curPie, int alph
 		{
 			if (depth == 0)
 			{
-				cout << weightU[i][0] << " " << weightU[i][1] << " " << weight[i] << endl;
+				cout << weights[i] << " " << weightd[i] << " " << weight[i] << endl;
 			}
 			if (weight[i] == best)
 			{
 				recordi = i;
-				srci = weightU[i][0];
-				dsti = weightU[i][1];
+				srci = weights[i];
+				dsti = weightd[i];
 			}
 		}
 
@@ -1186,8 +1191,8 @@ int search(int depth, vector<unsigned int>curPiece, vector<int> curPie, int alph
 					if (weight[ii] > best)
 					{
 						best = weight[ii];
-						srci = weightU[ii][0];
-						dsti = weightU[ii][1];
+						srci = weights[ii];
+						dsti = weightd[ii];
 					}
 				}
 			}
