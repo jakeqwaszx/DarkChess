@@ -10,56 +10,57 @@
 #include <random>
 #include <unordered_map>
 #include <map>
+#include <iomanip>
 #include "score.h"
 
 using namespace std;
 /*
-	Â½´Ñ¥­¦æ¤Æ µL¦P«¬ªí
+	ç¿»æ£‹å¹³è¡ŒåŒ– ç„¡åŒå‹è¡¨
 */
 
 
-unsigned int LS1B(unsigned int x) { return x & (-x); }//¨ú±oxªº³Ì§C¦ì¤¸
-unsigned int MS1B(unsigned int x) { // Most Significant 1 Bit (LS1B)¨ç¦¡
+unsigned int LS1B(unsigned int x) { return x & (-x); }//å–å¾—xçš„æœ€ä½ä½å…ƒ
+unsigned int MS1B(unsigned int x) { // Most Significant 1 Bit (LS1B)å‡½å¼
 	x |= x >> 32; x |= x >> 16; x |= x >> 8;
 	x |= x >> 4; x |= x >> 2; x |= x >> 1;
-	return (x >> 1) + 1; //¥i¥H¨ú±o¤@¦ê¦ì¤¸¤¤³Ì¥ªÃä¤£¬°¹sªº¦ì¤¸
+	return (x >> 1) + 1; //å¯ä»¥å–å¾—ä¸€ä¸²ä½å…ƒä¸­æœ€å·¦é‚Šä¸ç‚ºé›¶çš„ä½å…ƒ
 }
-unsigned int CGen(int ssrc, unsigned int toccupied);//ªğÁÙ¬¶¦ì 
+unsigned int CGen(int ssrc, unsigned int toccupied);//è¿”é‚„ç‚®ä½ 
 unsigned int CGenCR(unsigned int x);
 unsigned int CGenCL(unsigned int x);
 int BitsHash(unsigned int x) { return (x * 0x08ED2BE6) >> 27; }
-void initial();//ªì©l¤Æ 
-void chess(vector<unsigned int> tpiece, int deep, int& AEMindex, int& AOMindex, int& EAEMindex, int& EAOMindex, int allEatMove[50][2], int allOnlyMove[50][2]);//´M§ä¥i¥Î²¾°Ê
-void readBoard();//ÅªÀÉ¼Ò¦¡ Åª¨úboard.txt §âÅª¤JÀÉ®×Âà¦¨bitboard ÁÙ¨S­ËµÛ¦s¤J 
-void createMovetxt(string src, string dst, int srci, int dsti);//³Ğ³ymove.txt 0¨«¨B 1Â½´Ñ 
-void IndexToBoard(int indexa, int indexb, string& src, string& dst);//§âsrc dst±q½s¸¹0~31->´Ñ½L½s¸¹a1~d4 
-int countAva(vector<int> pie, int deep, vector<unsigned int> curPiece, int AEMindex, int AOMindex, int EAEMindex, int EAOMindex);//©I¥s«h¶Ç¦^·í«e´Ñª©
-int search(int depth, vector<unsigned int> curPiece, vector<int> curPie, int alpha, int beta, vector<int> lDCount, unsigned int hashvalue);//·j´M³Ì¨Î¨«¨B
-void drawOrNot();//¥Ñpast_walk§PÂ_¬O§_¥­¤â ¤§«áµ²ªG¿é¥Xµ¹draw 
-int findPiece(int place, unsigned int curPiece[16]);//¶Ç½s¸¹ ¦^¶Ç¦b³o­Ó½s¸¹ªº´Ñ¤l 
-unsigned int myhash(unsigned int tpiece[16]);//¶Ç¤J½L­±¡A¶Ç¦^hash­È
+void initial();//åˆå§‹åŒ– 
+void chess(const vector<unsigned int> &tpiece, int deep, int& AEMindex, int& AOMindex, int& EAEMindex, int& EAOMindex, int allEatMove[50][2], int allOnlyMove[50][2]);//å°‹æ‰¾å¯ç”¨ç§»å‹•
+void readBoard();//è®€æª”æ¨¡å¼ è®€å–board.txt æŠŠè®€å…¥æª”æ¡ˆè½‰æˆbitboard é‚„æ²’å€’è‘—å­˜å…¥ 
+void createMovetxt(string src, string dst, int srci, int dsti);//å‰µé€ move.txt 0èµ°æ­¥ 1ç¿»æ£‹ 
+void IndexToBoard(int indexa, int indexb, string& src, string& dst);//æŠŠsrc dstå¾ç·¨è™Ÿ0~31->æ£‹ç›¤ç·¨è™Ÿa1~d4 
+int countAva(const vector<int> &pie, int deep, const vector<unsigned int> &curPiece, int AEMindex, int AOMindex, int EAEMindex, int EAOMindex);//å‘¼å«å‰‡å‚³å›ç•¶å‰æ£‹ç‰ˆ
+int search(int depth, vector<unsigned int> curPiece, vector<int> curPie, int alpha, int beta, vector<int> lDCount, unsigned int hashvalue);//æœå°‹æœ€ä½³èµ°æ­¥
+void drawOrNot();//ç”±past_walkåˆ¤æ–·æ˜¯å¦å¹³æ‰‹ ä¹‹å¾Œçµæœè¼¸å‡ºçµ¦draw 
+int findPiece(int place, unsigned int curPiece[16]);//å‚³ç·¨è™Ÿ å›å‚³åœ¨é€™å€‹ç·¨è™Ÿçš„æ£‹å­ 
+unsigned int myhash(unsigned int tpiece[16]);//å‚³å…¥ç›¤é¢ï¼Œå‚³å›hashå€¼
 
 int index32[32] = { 31, 0, 1, 5, 2, 16, 27, 6, 3, 14, 17, 19, 28, 11, 7, 21, 30, 4, 15, 26, 13,
 18, 10, 20, 29, 25, 12, 9, 24, 8, 23, 22 };
-int GetIndex(unsigned int mask) { return index32[BitsHash(mask)]; }//¿é¤J¾B¸nªğ¦^´Ñ½L½s¸¹
+int GetIndex(unsigned int mask) { return index32[BitsHash(mask)]; }//è¼¸å…¥é®ç½©è¿”å›æ£‹ç›¤ç·¨è™Ÿ
 unsigned int pMoves[32] = { 0x00000012,0x00000025,0x0000004A,0x00000084,0x00000121,0x00000252,0x000004A4,0x00000848,
 0x00001210,0x00002520,0x00004A40,0x00008480,0x00012100,0x00025200,0x0004A400,0x00084800,
 0x00121000,0x00252000,0x004A4000,0x00848000,0x01210000,0x02520000,0x04A40000,0x08480000,
-0x12100000,0x25200000,0x4A400000,0x84800000,0x21000000,0x52000000,0xA4000000,0x48000000 };//´Ñ¤l²¾°Ê¾B¸n
+0x12100000,0x25200000,0x4A400000,0x84800000,0x21000000,0x52000000,0xA4000000,0x48000000 };//æ£‹å­ç§»å‹•é®ç½©
 unsigned int pMoves2[32] = {
 0x00000116,0x0000022D,0x0000044B,0x00000886,0x00001161,0x000022D2,0x000044B4,0x00008868,
 0x00011611,0x00022D22,0x00044B44,0x00088688,0x00116110,0x0022D220,0x0044B440,0x00886880,
 0x01161100,0x022D2200,0x044B4400,0x08868800,0x11611000,0x22D22000,0x44B44000,0x88688000,
-0x16110000,0x2D220000,0x4B440000,0x86880000,0x61100000,0xD2200000,0xB4400000,0x68800000 };//Â½´Ñ¾B¸n
+0x16110000,0x2D220000,0x4B440000,0x86880000,0x61100000,0xD2200000,0xB4400000,0x68800000 };//ç¿»æ£‹é®ç½©
 unsigned int pMoves3[32] = {
 0x00000136,0x0000027D,0x000004EB,0x000008C6,0x00001363,0x000027D7,0x00004EB4,0x00008C6C,
 0x00013631,0x00027D72,0x0004EBE4,0x0008C6C8,0x00136310,0x0027D720,0x004EBE40,0x008C6C80,
 0x01363100,0x027D7200,0x04EBE400,0x08C6C800,0x13631000,0x27D72000,0x4EBE4000,0x8C6C8000,
-0x36310000,0x7D720000,0xEBE40000,0xC6C80000,0x63100000,0xD7200000,0xBE400000,0x6C800000 };//Â½´Ñ¾B¸n
-unsigned int file[4] = { 0x11111111,0x22222222,0x44444444,0x88888888 };//¦æ¾B¸n 
-unsigned int row[8] = { 0x0000000F,0x000000F0,0x00000F00,0x0000F000,0x000F0000,0x00F00000,0x0F000000,0xF0000000 };//¦C¾B¸n 
-unsigned int piece[16]; //0ªÅ®æ- «Ók ¤hg ¬Ûm ¨®r °¨n ¬¶c §Lp *2 15¥¼Â½x 
-unsigned int red, black, occupied;//¬õ ¶Â ¦³´Ñ¤l 
+0x36310000,0x7D720000,0xEBE40000,0xC6C80000,0x63100000,0xD7200000,0xBE400000,0x6C800000 };//ç¿»æ£‹é®ç½©
+unsigned int file[4] = { 0x11111111,0x22222222,0x44444444,0x88888888 };//è¡Œé®ç½© 
+unsigned int row[8] = { 0x0000000F,0x000000F0,0x00000F00,0x0000F000,0x000F0000,0x00F00000,0x0F000000,0xF0000000 };//åˆ—é®ç½© 
+unsigned int piece[16]; //0ç©ºæ ¼- å¸¥k å£«g ç›¸m è»Šr é¦¬n ç‚®c å…µp *2 15æœªç¿»x 
+unsigned int red, black, occupied;//ç´… é»‘ æœ‰æ£‹å­ 
 int influenceValue[7][7] = {
 	120,108,60,36,24,48,0,
 	0,106,60,36,24,48,12,
@@ -70,30 +71,30 @@ int influenceValue[7][7] = {
 	108,0,0,0,0,0,10
 };
 
-string move = "a1-a1";//¤U¤@¨B¦æ°Ê ¥Î©ó­I´º 
-int piece_count[14] = { 1,2,2,2,2,2,5,1,2,2,2,2,2,5 };//³Ñ¾l´Ñ¤l¼Æ 0-6 7-13
-int DCount[14] = { 1,2,2,2,2,2,5,1,2,2,2,2,2,5 };//³Ñ¾l¥¼Â½¤l 
-string current_position[32];//½L­±ª¬ªpÁ`Äı 
+string move = "a1-a1";//ä¸‹ä¸€æ­¥è¡Œå‹• ç”¨æ–¼èƒŒæ™¯ 
+int piece_count[14] = { 1,2,2,2,2,2,5,1,2,2,2,2,2,5 };//å‰©é¤˜æ£‹å­æ•¸ 0-6 7-13
+int DCount[14] = { 1,2,2,2,2,2,5,1,2,2,2,2,2,5 };//å‰©é¤˜æœªç¿»å­ 
+string current_position[32];//ç›¤é¢ç‹€æ³ç¸½è¦½ 
 string history;
-int timeCount;//³Ñ¾l®É¶¡ 
-int initailBoard = 1;//¬O§_Åª¨úªì©lª©­± 
-int past_walk[7][2] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0 };//«e¤C¨B ¥Î¨Ó³B²z¥­§½°İÃD 
-int draw = 0;//0µL¥­¤â±¡ªp 1¦³¥i¯à¶i¤J¥­¤â 
-//int RMcount=13;//Åª¨ú¼Ò¦¡»İ­n ±q13¦æ¶}©lÅª¨úµ²ªG 
+int timeCount;//å‰©é¤˜æ™‚é–“ 
+int initailBoard = 1;//æ˜¯å¦è®€å–åˆå§‹ç‰ˆé¢ 
+int past_walk[7][2] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0 };//å‰ä¸ƒæ­¥ ç”¨ä¾†è™•ç†å¹³å±€å•é¡Œ 
+int draw = 0;//0ç„¡å¹³æ‰‹æƒ…æ³ 1æœ‰å¯èƒ½é€²å…¥å¹³æ‰‹ 
+//int RMcount=13;//è®€å–æ¨¡å¼éœ€è¦ å¾13è¡Œé–‹å§‹è®€å–çµæœ 
 
 int color;//0 red 1 black
 int maxDepth = 6;
-unsigned int open = 0xffffffff;//«D¥¼Â½´Ñ
-unsigned int ch;//»İ­nsearchªº¦ì¸m 
+unsigned int open = 0xffffffff;//éæœªç¿»æ£‹
+unsigned int ch;//éœ€è¦searchçš„ä½ç½® 
 int noReDepth = 1;
-unsigned int randtable[15][32]; //0~13 ¬°Âù¤è§LºØ 14 ¥¼Â½
+unsigned int randtable[15][32]; //0~13 ç‚ºé›™æ–¹å…µç¨® 14 æœªç¿»
 
 struct hashdata {
-	int count; int depth; unsigned int curPiece[16];
-	unsigned int NextCurPiece[4]; unsigned int NextHashvalue; int MaxDepth; int NextCurPie;
+	int count; int depth; vector<unsigned int> curPiece;
+	unsigned int NextCurPiece[4]; unsigned int NextHashvalue; int MaxDepth; int NextCurPie; vector<int> lDCount;
 };
 unordered_map<unsigned int, hashdata > hashtable;
-unordered_map<unsigned int, hashdata > hashtablef;
+unordered_map<unsigned int, unsigned int > hashtablep;
 int TotalSearch = 0;
 int HashHit = 0;
 int RealHit = 0;
@@ -105,9 +106,9 @@ int NoUseHash = 0;
 int Power[2][3][3][3][3][3][6][7];//all possible power
 int DistanceP[32][32][7][7];
 
-clock_t start, stop;//µ{¦¡°õ¦æ®É¶¡
-int TimeOut;//¬O§_¶W®É
-int TimeLimit;//®É¶¡­­¨î
+clock_t start, stop;//ç¨‹å¼åŸ·è¡Œæ™‚é–“
+int TimeOut;//æ˜¯å¦è¶…æ™‚
+int TimeLimit;//æ™‚é–“é™åˆ¶
 
 int test = 0;
 int test1 = 0;
@@ -123,12 +124,12 @@ int test8 = 0;
 int main() {
 	start = clock();
 	srand(time(NULL));
-	initial();//ªì©l¤Æ 
+	initial();//åˆå§‹åŒ– 
 	readBoard();
 	drawOrNot();
-	int onboardi = 0;//­pºâ³õ­±¤W¥¼Â½´Ñ¼Æ¶q 
-	int onboardpi = 0;//­pºâ³õ­±¤W¥¼Â½´ÑºØÃş 
-	int LivePieces = 0;//­pºâ³õ­±¤W©ú´Ñ¼Æ¶q 
+	int onboardi = 0;//è¨ˆç®—å ´é¢ä¸Šæœªç¿»æ£‹æ•¸é‡ 
+	int onboardpi = 0;//è¨ˆç®—å ´é¢ä¸Šæœªç¿»æ£‹ç¨®é¡ 
+	int LivePieces = 0;//è¨ˆç®—å ´é¢ä¸Šæ˜æ£‹æ•¸é‡ 
 	int complex = 0;
 	for (int i = 0; i < 14; i++)
 	{
@@ -142,7 +143,7 @@ int main() {
 	//if (onboardi <=27)maxDepth = (1000 - complex) / 100;
 	open = 0xffffffff;
 	ch = 0x00000000;
-	open ^= piece[15];//«D¥¼Â½´Ñ
+	open ^= piece[15];//éæœªç¿»æ£‹
 	if (piece[15] == 0xffffffff)
 	{
 		string a = "a";
@@ -171,11 +172,11 @@ int main() {
 		lDCount.assign(DCount, DCount + 14);
 		search(0, lcurPiece, lcurPie, -999999, 999999, lDCount, hashvalue);
 		stop = clock();
-		cout << " ¦¹¨B¯Ó®É : " << double(stop - start) / CLOCKS_PER_SEC << " ¬í(ºë·Ç«×0.001¬í) " << endl;
-		cout << " ²`«× : " << maxDepth << endl;
-		cout << " ¥»¤è¬° : ";
-		if (color == 0) cout << "¬õ " << endl;
-		else cout << "¶Â " << endl;
+		cout << " æ­¤æ­¥è€—æ™‚ : " << double(stop - start) / CLOCKS_PER_SEC << " ç§’(ç²¾æº–åº¦0.001ç§’) " << endl;
+		cout << " æ·±åº¦ : " << maxDepth << endl;
+		cout << " æœ¬æ–¹ç‚º : ";
+		if (color == 0) cout << "ç´… " << endl;
+		else cout << "é»‘ " << endl;
 		cout << "total search: " << TotalSearch << endl;
 		cout << "hash hit: " << HashHit << endl;
 		cout << "hash hit & same turn: " << HashHitSameTurn << endl;
@@ -189,10 +190,10 @@ int main() {
 	}
 }
 
-void chess(vector<unsigned int> tpiece, int deep, int& AEMindex, int& AOMindex, int& EAEMindex, int& EAOMindex, int allEatMove[50][2], int allOnlyMove[50][2])
+void chess(const vector<unsigned int> &tpiece, int deep, int& AEMindex, int& AOMindex, int& EAEMindex, int& EAOMindex, int allEatMove[50][2], int allOnlyMove[50][2])
 {
 	unsigned int tred, tblack;
-	unsigned int dest;//¥i¥H¦Y¤lªº¦æ°Ê
+	unsigned int dest;//å¯ä»¥åƒå­çš„è¡Œå‹•
 	AEMindex = 0;
 	AOMindex = 0;
 	EAEMindex = 0;
@@ -203,58 +204,63 @@ void chess(vector<unsigned int> tpiece, int deep, int& AEMindex, int& AOMindex, 
 	tblack = tpiece[8] | tpiece[9] | tpiece[10] | tpiece[11] | tpiece[12] | tpiece[13] | tpiece[14];
 	int ssrc = 0;
 	int check = (color + deep) % 2;//0red 1black
-	if (check == 0) {//¬õ 
+	vector<int> temp = {0,0};
+	if (check == 0) {//ç´… 
 		//cout<<"Ours available eat:"<<endl;
-		for (int i = 1; i < 8; i++) { //1~7 ¬°«Ó~§L,src ¬°´Ñ¤l°_ÂI,dest ¬°²×ÂI¡C  ¥ıºâ§Ú¤è 
-			unsigned int p = tpiece[i]; //¨ú±o´Ñ¤l¦ì¸m
-			while (p) { //±N¬õ¦â 1~7 ¸¹ªº¤l³£·j´M¤@¹M
-				unsigned int mask = LS1B(p); //¦pªG¸Ó´Ñ¤l¦b¦h­Ó¦ì¸m,¥ı¨ú§C¦ì¤¸ªº¦ì¸m¡C
-				p ^= mask; //°£¥h¦ì©ó³Ì§C¦ì¤¸ªº¸Ó§LºØ
-				ssrc = GetIndex(mask); //±N³Ì§C¦ì¤¸ªº§LºØ³]¬°¨«¨B°_ÂI
-				if (i == 1) //«Ó,©P³ò¨ò(14)¥H¥~ªº¶Â¤l³£¥i¥H¦Y¡C
+		for (int i = 1; i < 8; i++) { //1~7 ç‚ºå¸¥~å…µ,src ç‚ºæ£‹å­èµ·é»,dest ç‚ºçµ‚é»ã€‚  å…ˆç®—æˆ‘æ–¹ 
+			unsigned int p = tpiece[i]; //å–å¾—æ£‹å­ä½ç½®
+			while (p) { //å°‡ç´…è‰² 1~7 è™Ÿçš„å­éƒ½æœå°‹ä¸€é
+				unsigned int mask = LS1B(p); //å¦‚æœè©²æ£‹å­åœ¨å¤šå€‹ä½ç½®,å…ˆå–ä½ä½å…ƒçš„ä½ç½®ã€‚
+				p ^= mask; //é™¤å»ä½æ–¼æœ€ä½ä½å…ƒçš„è©²å…µç¨®
+				ssrc = GetIndex(mask); //å°‡æœ€ä½ä½å…ƒçš„å…µç¨®è¨­ç‚ºèµ°æ­¥èµ·é»
+				if (i == 1) //å¸¥,å‘¨åœå’(14)ä»¥å¤–çš„é»‘å­éƒ½å¯ä»¥åƒã€‚
 					dest = pMoves[ssrc] & (tblack ^ tpiece[14]);
-				else if (i == 2) //¥K,©P³ò±N(8)¥H¥~ªº¶Â¤l³£¥i¥H¦Y¡C
+				else if (i == 2) //ä»•,å‘¨åœå°‡(8)ä»¥å¤–çš„é»‘å­éƒ½å¯ä»¥åƒã€‚
 					dest = pMoves[ssrc] & (tblack ^ tpiece[8]);
-				else if (i == 3) //¬Û,©P³ò±N¡B¤h¥H¥~ªº¶Â¤l³£¥i¥H¦Y¡C	
+				else if (i == 3) //ç›¸,å‘¨åœå°‡ã€å£«ä»¥å¤–çš„é»‘å­éƒ½å¯ä»¥åƒã€‚	
 					dest = pMoves[ssrc] & (tblack ^ tpiece[8] ^ tpiece[9]);
-				else if (i == 4) //?,¥u¯à¦Y¨®(11)¡B°¨¡B¬¶¡B¨ò¡C
+				else if (i == 4) //?,åªèƒ½åƒè»Š(11)ã€é¦¬ã€ç‚®ã€å’ã€‚
 					dest = pMoves[ssrc] & (tpiece[11] | tpiece[12] | tpiece[13] | tpiece[14]);
-				else if (i == 5) //ØX,¥u¯à¦Y°¨(12)¡B¬¶¡B¨ò¡C
+				else if (i == 5) //å‚Œ,åªèƒ½åƒé¦¬(12)ã€ç‚®ã€å’ã€‚
 					dest = pMoves[ssrc] & (tpiece[12] | tpiece[13] | tpiece[14]);
-				else if (i == 6) //¬¶,¯S®í³B²z¡C
+				else if (i == 6) //ç‚®,ç‰¹æ®Šè™•ç†ã€‚
 					dest = CGen(ssrc, toccupied) & tblack;
-				else if (i == 7) //§L,¥u¯à¦Y±N(8)¡B¨ò(14)¡C
+				else if (i == 7) //å…µ,åªèƒ½åƒå°‡(8)ã€å’(14)ã€‚
 					dest = pMoves[ssrc] & (tpiece[8] | tpiece[14]);
 				else
 					dest = 0;
-				while (dest) { //¦pªG dest ¦³¦h­Ó¦ì¸mªº¸Ü,¤À¶}¦s°_¨Ó¡C
+				while (dest) { //å¦‚æœ dest æœ‰å¤šå€‹ä½ç½®çš„è©±,åˆ†é–‹å­˜èµ·ä¾†ã€‚
 					unsigned int mask2 = LS1B(dest);
 					dest ^= mask2;
 					int result = GetIndex(mask2);
+					temp[0] = ssrc;
+					temp[1] = result;
 					allEatMove[AEMindex][0] = ssrc;
 					allEatMove[AEMindex][1] = result;
 					AEMindex++;
 				}
 			}
 		}
-		for (int i = 1; i < 8; i++) { //¬õ¤è¯Â²¾°Ê
-			unsigned int p = tpiece[i]; //¨ú±o´Ñ¤l¦ì¸m
-			while (p) { //±N¬õ¦â 1~7 ¸¹ªº¤l³£·j´M¤@¹M
-				unsigned int mask = LS1B(p); //¦pªG¸Ó´Ñ¤l¦b¦h­Ó¦ì¸m,¥ı¨ú§C¦ì¤¸ªº¦ì¸m¡C
-				p ^= mask; //°£¥h¦ì©ó³Ì§C¦ì¤¸ªº¸Ó§LºØ
-				ssrc = GetIndex(mask); //±N³Ì§C¦ì¤¸ªº§LºØ³]¬°¨«¨B°_ÂI
-				dest = pMoves[ssrc] & tpiece[0];//¥u¨«ªÅ®æ
-				while (dest) { //¦pªG dest ¦³¦h­Ó¦ì¸mªº¸Ü,¤À¶}¦s°_¨Ó¡C
+		for (int i = 1; i < 8; i++) { //ç´…æ–¹ç´”ç§»å‹•
+			unsigned int p = tpiece[i]; //å–å¾—æ£‹å­ä½ç½®
+			while (p) { //å°‡ç´…è‰² 1~7 è™Ÿçš„å­éƒ½æœå°‹ä¸€é
+				unsigned int mask = LS1B(p); //å¦‚æœè©²æ£‹å­åœ¨å¤šå€‹ä½ç½®,å…ˆå–ä½ä½å…ƒçš„ä½ç½®ã€‚
+				p ^= mask; //é™¤å»ä½æ–¼æœ€ä½ä½å…ƒçš„è©²å…µç¨®
+				ssrc = GetIndex(mask); //å°‡æœ€ä½ä½å…ƒçš„å…µç¨®è¨­ç‚ºèµ°æ­¥èµ·é»
+				dest = pMoves[ssrc] & tpiece[0];//åªèµ°ç©ºæ ¼
+				while (dest) { //å¦‚æœ dest æœ‰å¤šå€‹ä½ç½®çš„è©±,åˆ†é–‹å­˜èµ·ä¾†ã€‚
 					unsigned int mask2 = LS1B(dest);
 					dest ^= mask2;
 					int result = GetIndex(mask2);
+					temp[0] = ssrc;
+					temp[1] = result;
 					allOnlyMove[AOMindex][0] = ssrc;
 					allOnlyMove[AOMindex][1] = result;
 					AOMindex++;
 				}
 			}
 		}
-		for (int i = 8; i < 15; i++) { //¦Aºâ¹ï¤â¦æ°Ê 
+		for (int i = 8; i < 15; i++) { //å†ç®—å°æ‰‹è¡Œå‹• 
 			unsigned int p = tpiece[i];
 			while (p) {
 				unsigned int mask = LS1B(p);
@@ -262,21 +268,21 @@ void chess(vector<unsigned int> tpiece, int deep, int& AEMindex, int& AOMindex, 
 				ssrc = GetIndex(mask);
 				if (i == 8)
 					dest = pMoves[ssrc] & (tred ^ tpiece[7]);
-				else if (i == 9) //¥K,©P³ò±N(8)¥H¥~ªº¶Â¤l³£¥i¥H¦Y¡C
+				else if (i == 9) //ä»•,å‘¨åœå°‡(8)ä»¥å¤–çš„é»‘å­éƒ½å¯ä»¥åƒã€‚
 					dest = pMoves[ssrc] & (tred ^ tpiece[1]);
-				else if (i == 10) //¬Û,©P³ò±N¡B¤h¥H¥~ªº¶Â¤l³£¥i¥H¦Y¡C	
+				else if (i == 10) //ç›¸,å‘¨åœå°‡ã€å£«ä»¥å¤–çš„é»‘å­éƒ½å¯ä»¥åƒã€‚	
 					dest = pMoves[ssrc] & (tred ^ tpiece[1] ^ tpiece[2]);
-				else if (i == 11) //?,¥u¯à¦Y¨®(11)¡B°¨¡B¬¶¡B¨ò¡C
+				else if (i == 11) //?,åªèƒ½åƒè»Š(11)ã€é¦¬ã€ç‚®ã€å’ã€‚
 					dest = pMoves[ssrc] & (tpiece[4] | tpiece[5] | tpiece[6] | tpiece[7]);
-				else if (i == 12) //ØX,¥u¯à¦Y°¨(12)¡B¬¶¡B¨ò¡C
+				else if (i == 12) //å‚Œ,åªèƒ½åƒé¦¬(12)ã€ç‚®ã€å’ã€‚
 					dest = pMoves[ssrc] & (tpiece[5] | tpiece[6] | tpiece[7]);
-				else if (i == 13) //¬¶,¯S®í³B²z¡C
+				else if (i == 13) //ç‚®,ç‰¹æ®Šè™•ç†ã€‚
 					dest = CGen(ssrc, toccupied) & tred;
-				else if (i == 14) //§L,¥u¯à¦Y±N¡B¨ò(14)¡C
+				else if (i == 14) //å…µ,åªèƒ½åƒå°‡ã€å’(14)ã€‚
 					dest = pMoves[ssrc] & (tpiece[1] | tpiece[7]);
 				else
 					dest = 0;
-				while (dest) { //¹ï¤â¦æ°Ê¦s¤JEallEatMove 
+				while (dest) { //å°æ‰‹è¡Œå‹•å­˜å…¥EallEatMove 
 					unsigned int mask2 = LS1B(dest);
 					dest ^= mask2;
 					int result = GetIndex(mask2);
@@ -286,14 +292,14 @@ void chess(vector<unsigned int> tpiece, int deep, int& AEMindex, int& AOMindex, 
 				}
 			}
 		}
-		for (int i = 8; i < 15; i++) { //¹ï¤â¯Â²¾°Ê 
-			unsigned int p = tpiece[i]; //¨ú±o´Ñ¤l¦ì¸m
-			while (p) { //±N¶Â¦â 8~14 ¸¹ªº¤l³£·j´M¤@¹M
-				unsigned int mask = LS1B(p); //¦pªG¸Ó´Ñ¤l¦b¦h­Ó¦ì¸m,¥ı¨ú§C¦ì¤¸ªº¦ì¸m¡C
-				p ^= mask; //°£¥h¦ì©ó³Ì§C¦ì¤¸ªº¸Ó§LºØ
-				ssrc = GetIndex(mask); //±N³Ì§C¦ì¤¸ªº§LºØ³]¬°¨«¨B°_ÂI
-				dest = pMoves[ssrc] & tpiece[0];//¥u¨«ªÅ®æ
-				while (dest) { //¦pªG dest ¦³¦h­Ó¦ì¸mªº¸Ü,¤À¶}¦s°_¨Ó¡C
+		for (int i = 8; i < 15; i++) { //å°æ‰‹ç´”ç§»å‹• 
+			unsigned int p = tpiece[i]; //å–å¾—æ£‹å­ä½ç½®
+			while (p) { //å°‡é»‘è‰² 8~14 è™Ÿçš„å­éƒ½æœå°‹ä¸€é
+				unsigned int mask = LS1B(p); //å¦‚æœè©²æ£‹å­åœ¨å¤šå€‹ä½ç½®,å…ˆå–ä½ä½å…ƒçš„ä½ç½®ã€‚
+				p ^= mask; //é™¤å»ä½æ–¼æœ€ä½ä½å…ƒçš„è©²å…µç¨®
+				ssrc = GetIndex(mask); //å°‡æœ€ä½ä½å…ƒçš„å…µç¨®è¨­ç‚ºèµ°æ­¥èµ·é»
+				dest = pMoves[ssrc] & tpiece[0];//åªèµ°ç©ºæ ¼
+				while (dest) { //å¦‚æœ dest æœ‰å¤šå€‹ä½ç½®çš„è©±,åˆ†é–‹å­˜èµ·ä¾†ã€‚
 					unsigned int mask2 = LS1B(dest);
 					dest ^= mask2;
 					int result = GetIndex(mask2);
@@ -304,79 +310,83 @@ void chess(vector<unsigned int> tpiece, int deep, int& AEMindex, int& AOMindex, 
 			}
 		}
 	}
-	else {//¶Â¤è²¾°Ê 
-		for (int i = 8; i < 15; i++) { //1~7 ¬°«Ó~§L,src ¬°´Ñ¤l°_ÂI,dest ¬°²×ÂI¡C
-			unsigned int p = tpiece[i]; //¨ú±o´Ñ¤l¦ì¸m
-			while (p) { //±N¶Â¦â 1~7 ¸¹ªº¤l³£·j´M¤@¹M
-				unsigned int mask = LS1B(p); //¦pªG¸Ó´Ñ¤l¦b¦h­Ó¦ì¸m,¥ı¨ú§C¦ì¤¸ªº¦ì¸m¡C
-				p ^= mask; //°£¥h¦ì©ó³Ì§C¦ì¤¸ªº¸Ó§LºØ
-				ssrc = GetIndex(mask); //±N³Ì§C¦ì¤¸ªº§LºØ³]¬°¨«¨B°_ÂI
-				if (i == 8) //«Ó,©P³ò¨ò(14)¥H¥~ªº¶Â¤l³£¥i¥H¦Y¡C
+	else {//é»‘æ–¹ç§»å‹• 
+		for (int i = 8; i < 15; i++) { //1~7 ç‚ºå¸¥~å…µ,src ç‚ºæ£‹å­èµ·é»,dest ç‚ºçµ‚é»ã€‚
+			unsigned int p = tpiece[i]; //å–å¾—æ£‹å­ä½ç½®
+			while (p) { //å°‡é»‘è‰² 1~7 è™Ÿçš„å­éƒ½æœå°‹ä¸€é
+				unsigned int mask = LS1B(p); //å¦‚æœè©²æ£‹å­åœ¨å¤šå€‹ä½ç½®,å…ˆå–ä½ä½å…ƒçš„ä½ç½®ã€‚
+				p ^= mask; //é™¤å»ä½æ–¼æœ€ä½ä½å…ƒçš„è©²å…µç¨®
+				ssrc = GetIndex(mask); //å°‡æœ€ä½ä½å…ƒçš„å…µç¨®è¨­ç‚ºèµ°æ­¥èµ·é»
+				if (i == 8) //å¸¥,å‘¨åœå’(14)ä»¥å¤–çš„é»‘å­éƒ½å¯ä»¥åƒã€‚
 					dest = pMoves[ssrc] & (tred ^ tpiece[7]);
-				else if (i == 9) //¥K,©P³ò±N(8)¥H¥~ªº¶Â¤l³£¥i¥H¦Y¡C
+				else if (i == 9) //ä»•,å‘¨åœå°‡(8)ä»¥å¤–çš„é»‘å­éƒ½å¯ä»¥åƒã€‚
 					dest = pMoves[ssrc] & (tred ^ tpiece[1]);
-				else if (i == 10) //¬Û,©P³ò±N¡B¤h¥H¥~ªº¶Â¤l³£¥i¥H¦Y¡C	
+				else if (i == 10) //ç›¸,å‘¨åœå°‡ã€å£«ä»¥å¤–çš„é»‘å­éƒ½å¯ä»¥åƒã€‚	
 					dest = pMoves[ssrc] & (tred ^ tpiece[1] ^ tpiece[2]);
-				else if (i == 11) //?,¥u¯à¦Y¨®(11)¡B°¨¡B¬¶¡B¨ò¡C
+				else if (i == 11) //?,åªèƒ½åƒè»Š(11)ã€é¦¬ã€ç‚®ã€å’ã€‚
 					dest = pMoves[ssrc] & (tpiece[4] | tpiece[5] | tpiece[6] | tpiece[7]);
-				else if (i == 12) //ØX,¥u¯à¦Y°¨(12)¡B¬¶¡B¨ò¡C
+				else if (i == 12) //å‚Œ,åªèƒ½åƒé¦¬(12)ã€ç‚®ã€å’ã€‚
 					dest = pMoves[ssrc] & (tpiece[5] | tpiece[6] | tpiece[7]);
-				else if (i == 13) //¬¶,¯S®í³B²z¡C
+				else if (i == 13) //ç‚®,ç‰¹æ®Šè™•ç†ã€‚
 					dest = CGen(ssrc, toccupied) & tred;
-				else if (i == 14) //§L,¥u¯à¦Y±N¡B¨ò(14)¡C
+				else if (i == 14) //å…µ,åªèƒ½åƒå°‡ã€å’(14)ã€‚
 					dest = pMoves[ssrc] & (tpiece[1] | tpiece[7]);
 				else
 					dest = 0;
-				while (dest) { //¦pªG dest ¦³¦h­Ó¦ì¸mªº¸Ü,¤À¶}¦s°_¨Ó¡C
+				while (dest) { //å¦‚æœ dest æœ‰å¤šå€‹ä½ç½®çš„è©±,åˆ†é–‹å­˜èµ·ä¾†ã€‚
 					unsigned int mask2 = LS1B(dest);
 					dest ^= mask2;
 					int result = GetIndex(mask2);
+					temp[0] = ssrc;
+					temp[1] = result;
 					allEatMove[AEMindex][0] = ssrc;
 					allEatMove[AEMindex][1] = result;
 					AEMindex++;
 				}
 			}
 		}
-		for (int i = 8; i < 15; i++) { //¶Â¤è¯Â²¾°Ê
-			unsigned int p = tpiece[i]; //¨ú±o´Ñ¤l¦ì¸m
-			while (p) { //±N¶Â¦â 8~14 ¸¹ªº¤l³£·j´M¤@¹M
-				unsigned int mask = LS1B(p); //¦pªG¸Ó´Ñ¤l¦b¦h­Ó¦ì¸m,¥ı¨ú§C¦ì¤¸ªº¦ì¸m¡C
-				p ^= mask; //°£¥h¦ì©ó³Ì§C¦ì¤¸ªº¸Ó§LºØ
-				ssrc = GetIndex(mask); //±N³Ì§C¦ì¤¸ªº§LºØ³]¬°¨«¨B°_ÂI
-				dest = pMoves[ssrc] & tpiece[0];//¥u¨«ªÅ®æ
-				while (dest) { //¦pªG dest ¦³¦h­Ó¦ì¸mªº¸Ü,¤À¶}¦s°_¨Ó¡C
+		for (int i = 8; i < 15; i++) { //é»‘æ–¹ç´”ç§»å‹•
+			unsigned int p = tpiece[i]; //å–å¾—æ£‹å­ä½ç½®
+			while (p) { //å°‡é»‘è‰² 8~14 è™Ÿçš„å­éƒ½æœå°‹ä¸€é
+				unsigned int mask = LS1B(p); //å¦‚æœè©²æ£‹å­åœ¨å¤šå€‹ä½ç½®,å…ˆå–ä½ä½å…ƒçš„ä½ç½®ã€‚
+				p ^= mask; //é™¤å»ä½æ–¼æœ€ä½ä½å…ƒçš„è©²å…µç¨®
+				ssrc = GetIndex(mask); //å°‡æœ€ä½ä½å…ƒçš„å…µç¨®è¨­ç‚ºèµ°æ­¥èµ·é»
+				dest = pMoves[ssrc] & tpiece[0];//åªèµ°ç©ºæ ¼
+				while (dest) { //å¦‚æœ dest æœ‰å¤šå€‹ä½ç½®çš„è©±,åˆ†é–‹å­˜èµ·ä¾†ã€‚
 					unsigned int mask2 = LS1B(dest);
 					dest ^= mask2;
 					int result = GetIndex(mask2);
+					temp[0] = ssrc;
+					temp[1] = result;
 					allOnlyMove[AOMindex][0] = ssrc;
 					allOnlyMove[AOMindex][1] = result;
 					AOMindex++;
 				}
 			}
 		}
-		for (int i = 1; i < 8; i++) { //­pºâ¼Ä¤è²¾°Ê 
-			unsigned int p = tpiece[i]; //¨ú±o´Ñ¤l¦ì¸m
-			while (p) { //±N¬õ¦â 1~7 ¸¹ªº¤l³£·j´M¤@¹M
-				unsigned int mask = LS1B(p); //¦pªG¸Ó´Ñ¤l¦b¦h­Ó¦ì¸m,¥ı¨ú§C¦ì¤¸ªº¦ì¸m¡C
-				p ^= mask; //°£¥h¦ì©ó³Ì§C¦ì¤¸ªº¸Ó§LºØ
-				ssrc = GetIndex(mask); //±N³Ì§C¦ì¤¸ªº§LºØ³]¬°¨«¨B°_ÂI
-				if (i == 1) //«Ó,©P³ò¨ò(14)¥H¥~ªº¶Â¤l³£¥i¥H¦Y¡C
+		for (int i = 1; i < 8; i++) { //è¨ˆç®—æ•µæ–¹ç§»å‹• 
+			unsigned int p = tpiece[i]; //å–å¾—æ£‹å­ä½ç½®
+			while (p) { //å°‡ç´…è‰² 1~7 è™Ÿçš„å­éƒ½æœå°‹ä¸€é
+				unsigned int mask = LS1B(p); //å¦‚æœè©²æ£‹å­åœ¨å¤šå€‹ä½ç½®,å…ˆå–ä½ä½å…ƒçš„ä½ç½®ã€‚
+				p ^= mask; //é™¤å»ä½æ–¼æœ€ä½ä½å…ƒçš„è©²å…µç¨®
+				ssrc = GetIndex(mask); //å°‡æœ€ä½ä½å…ƒçš„å…µç¨®è¨­ç‚ºèµ°æ­¥èµ·é»
+				if (i == 1) //å¸¥,å‘¨åœå’(14)ä»¥å¤–çš„é»‘å­éƒ½å¯ä»¥åƒã€‚
 					dest = pMoves[ssrc] & (tblack ^ tpiece[14]);
-				else if (i == 2) //¥K,©P³ò±N(8)¥H¥~ªº¶Â¤l³£¥i¥H¦Y¡C
+				else if (i == 2) //ä»•,å‘¨åœå°‡(8)ä»¥å¤–çš„é»‘å­éƒ½å¯ä»¥åƒã€‚
 					dest = pMoves[ssrc] & (tblack ^ tpiece[8]);
-				else if (i == 3) //¬Û,©P³ò±N¡B¤h¥H¥~ªº¶Â¤l³£¥i¥H¦Y¡C	
+				else if (i == 3) //ç›¸,å‘¨åœå°‡ã€å£«ä»¥å¤–çš„é»‘å­éƒ½å¯ä»¥åƒã€‚	
 					dest = pMoves[ssrc] & (tblack ^ tpiece[8] ^ tpiece[9]);
-				else if (i == 4) //?,¥u¯à¦Y¨®(11)¡B°¨¡B¬¶¡B¨ò¡C
+				else if (i == 4) //?,åªèƒ½åƒè»Š(11)ã€é¦¬ã€ç‚®ã€å’ã€‚
 					dest = pMoves[ssrc] & (tpiece[11] | tpiece[12] | tpiece[13] | tpiece[14]);
-				else if (i == 5) //ØX,¥u¯à¦Y°¨(12)¡B¬¶¡B¨ò¡C
+				else if (i == 5) //å‚Œ,åªèƒ½åƒé¦¬(12)ã€ç‚®ã€å’ã€‚
 					dest = pMoves[ssrc] & (tpiece[12] | tpiece[13] | tpiece[14]);
-				else if (i == 6) //¬¶,¯S®í³B²z¡C
+				else if (i == 6) //ç‚®,ç‰¹æ®Šè™•ç†ã€‚
 					dest = CGen(ssrc, toccupied) & tblack;
-				else if (i == 7) //§L,¥u¯à¦Y±N(8)¡B¨ò(14)¡C
+				else if (i == 7) //å…µ,åªèƒ½åƒå°‡(8)ã€å’(14)ã€‚
 					dest = pMoves[ssrc] & (tpiece[8] | tpiece[14]);
 				else
 					dest = 0;
-				while (dest) { //¦pªG dest ¦³¦h­Ó¦ì¸mªº¸Ü,¤À¶}¦s°_¨Ó¡C
+				while (dest) { //å¦‚æœ dest æœ‰å¤šå€‹ä½ç½®çš„è©±,åˆ†é–‹å­˜èµ·ä¾†ã€‚
 					unsigned int mask2 = LS1B(dest);
 					dest ^= mask2;
 					int result = GetIndex(mask2);
@@ -386,14 +396,14 @@ void chess(vector<unsigned int> tpiece, int deep, int& AEMindex, int& AOMindex, 
 				}
 			}
 		}
-		for (int i = 1; i < 8; i++) { //¬õ¤è¯Â²¾°Ê
-			unsigned int p = tpiece[i]; //¨ú±o´Ñ¤l¦ì¸m
-			while (p) { //±N¬õ¦â 1~7 ¸¹ªº¤l³£·j´M¤@¹M
-				unsigned int mask = LS1B(p); //¦pªG¸Ó´Ñ¤l¦b¦h­Ó¦ì¸m,¥ı¨ú§C¦ì¤¸ªº¦ì¸m¡C
-				p ^= mask; //°£¥h¦ì©ó³Ì§C¦ì¤¸ªº¸Ó§LºØ
-				ssrc = GetIndex(mask); //±N³Ì§C¦ì¤¸ªº§LºØ³]¬°¨«¨B°_ÂI
-				dest = pMoves[ssrc] & tpiece[0];//¥u¨«ªÅ®æ
-				while (dest) { //¦pªG dest ¦³¦h­Ó¦ì¸mªº¸Ü,¤À¶}¦s°_¨Ó¡C
+		for (int i = 1; i < 8; i++) { //ç´…æ–¹ç´”ç§»å‹•
+			unsigned int p = tpiece[i]; //å–å¾—æ£‹å­ä½ç½®
+			while (p) { //å°‡ç´…è‰² 1~7 è™Ÿçš„å­éƒ½æœå°‹ä¸€é
+				unsigned int mask = LS1B(p); //å¦‚æœè©²æ£‹å­åœ¨å¤šå€‹ä½ç½®,å…ˆå–ä½ä½å…ƒçš„ä½ç½®ã€‚
+				p ^= mask; //é™¤å»ä½æ–¼æœ€ä½ä½å…ƒçš„è©²å…µç¨®
+				ssrc = GetIndex(mask); //å°‡æœ€ä½ä½å…ƒçš„å…µç¨®è¨­ç‚ºèµ°æ­¥èµ·é»
+				dest = pMoves[ssrc] & tpiece[0];//åªèµ°ç©ºæ ¼
+				while (dest) { //å¦‚æœ dest æœ‰å¤šå€‹ä½ç½®çš„è©±,åˆ†é–‹å­˜èµ·ä¾†ã€‚
 					unsigned int mask2 = LS1B(dest);
 					dest ^= mask2;
 					int result = GetIndex(mask2);
@@ -408,11 +418,11 @@ void chess(vector<unsigned int> tpiece, int deep, int& AEMindex, int& AOMindex, 
 
 unsigned int CGen(int ssrc, unsigned int toccupied)
 {
-	int r = ssrc / 4;//¦C 
-	int c = ssrc % 4;//¦æ 
+	int r = ssrc / 4;//åˆ— 
+	int c = ssrc % 4;//è¡Œ 
 	unsigned int result = 0;
 	unsigned int resulta = 0;
-	unsigned int x = ((row[r] & toccupied) ^ (1 << ssrc)) >> (4 * r);//¨ú¥X¸ò¬¶¦P¦C «d¥h¬¶¥»¨­¨º®æ
+	unsigned int x = ((row[r] & toccupied) ^ (1 << ssrc)) >> (4 * r);//å–å‡ºè·Ÿç‚®åŒåˆ— å‰Šå»ç‚®æœ¬èº«é‚£æ ¼
 	if (x && c == 0) {
 		result |= CGenCL(x);
 	}
@@ -427,7 +437,7 @@ unsigned int CGen(int ssrc, unsigned int toccupied)
 	}
 	result = result << (4 * r);
 
-	x = ((file[c] & toccupied) ^ (1 << ssrc)) >> c;//¨ú¥X¸ò¬¶¦P¦æ ¨Ã¥ş³¡©ñ¨ì²Ä1¦æ
+	x = ((file[c] & toccupied) ^ (1 << ssrc)) >> c;//å–å‡ºè·Ÿç‚®åŒè¡Œ ä¸¦å…¨éƒ¨æ”¾åˆ°ç¬¬1è¡Œ
 	if (x && r == 0)
 	{
 		resulta |= CGenCL(x);
@@ -478,27 +488,27 @@ unsigned int CGen(int ssrc, unsigned int toccupied)
 
 unsigned int CGenCL(unsigned int x) {
 	if (x) {
-		unsigned int mask = LS1B(x); //mask ¬°¬¶¬[ªº¾B¸n¦ì¸m,Åı x ®ø¥h¬¶¬[¡C
-		return (x ^= mask) ? LS1B(x) : 0; //ª¬ªp 5~8 ¶Ç¦^ LS1B(x),ª¬ªp 2~4 ¶Ç¦^ 0¡C
+		unsigned int mask = LS1B(x); //mask ç‚ºç‚®æ¶çš„é®ç½©ä½ç½®,è®“ x æ¶ˆå»ç‚®æ¶ã€‚
+		return (x ^= mask) ? LS1B(x) : 0; //ç‹€æ³ 5~8 å‚³å› LS1B(x),ç‹€æ³ 2~4 å‚³å› 0ã€‚
 	}
 	else return 0;
 }
 
 unsigned int CGenCR(unsigned int x) {
 	if (x) {
-		unsigned int mask = MS1B(x); //mask ¬°¬¶¬[ªº¾B¸n¦ì¸m,Åı x ®ø¥h¬¶¬[¡C
-		return (x ^= mask) ? MS1B(x) : 0; //ª¬ªp 5~8 ¶Ç¦^ MS1B(x),ª¬ªp 2~4 ¶Ç¦^ 0¡C
+		unsigned int mask = MS1B(x); //mask ç‚ºç‚®æ¶çš„é®ç½©ä½ç½®,è®“ x æ¶ˆå»ç‚®æ¶ã€‚
+		return (x ^= mask) ? MS1B(x) : 0; //ç‹€æ³ 5~8 å‚³å› MS1B(x),ç‹€æ³ 2~4 å‚³å› 0ã€‚
 	}
 	else return 0;
 }
 
-int countAva(vector<int> pie, int deep, vector<unsigned int> curPiece, int AEMindex, int AOMindex, int EAEMindex, int EAOMindex)//±N¤h¬Û¨®°¨¬¶§L
+int countAva(const vector<int> &pie, int deep, const vector<unsigned int> &curPiece, int AEMindex, int AOMindex, int EAEMindex, int EAOMindex)//å°‡å£«ç›¸è»Šé¦¬ç‚®å…µ
 {
 	int eat[10];
 	int power = 0;
 	int redleft = 0;
 	int blackleft = 0;
-	if (color == 0)//¬õ 
+	if (color == 0)//ç´… 
 	{
 		for (int i = 0; i < 7; i++)
 		{
@@ -528,19 +538,19 @@ int countAva(vector<int> pie, int deep, vector<unsigned int> curPiece, int AEMin
 		if (blackleft == 0) power = -100000 + deep * 1000;
 		if (redleft == 0) power = 100000 - deep * 1000;
 	}
-	//------------------------------------------------------§PÂ_¶ZÂ÷ 
+	//------------------------------------------------------åˆ¤æ–·è·é›¢ 
 	int distanceScore = 0;
 	if (curPiece[15] == 0) {
 		if (color == 0)
 		{
 			for (int i = 1; i < 8; i++)
 			{
-				if (curPiece[i] && i != 6)//curp!=0 ª©­±¤W¦s¦b
+				if (curPiece[i] && i != 6)//curp!=0 ç‰ˆé¢ä¸Šå­˜åœ¨
 				{
 					unsigned int tempcpa = curPiece[i];
 					while (tempcpa)
 					{
-						unsigned int a = LS1B(tempcpa);//¤@­Ó¤@­Ó³B²z 
+						unsigned int a = LS1B(tempcpa);//ä¸€å€‹ä¸€å€‹è™•ç† 
 						tempcpa = tempcpa ^ a;
 						for (int ii = i + 7; ii < 15; ii++)
 						{
@@ -550,11 +560,11 @@ int countAva(vector<int> pie, int deep, vector<unsigned int> curPiece, int AEMin
 								unsigned int tempcpb = curPiece[ii];
 								while (tempcpb)
 								{
-									unsigned int b = LS1B(tempcpb);//¤@­Ó¤@­Ó³B²z 
+									unsigned int b = LS1B(tempcpb);//ä¸€å€‹ä¸€å€‹è™•ç† 
 									tempcpb = tempcpb ^ b;
 
-									int ia = GetIndex(a);//±o¨ìaªºindex 0~31 
-									int ib = GetIndex(b);//±o¨ìbªºindex 
+									int ia = GetIndex(a);//å¾—åˆ°açš„index 0~31 
+									int ib = GetIndex(b);//å¾—åˆ°bçš„index 
 
 									int tempS = DistanceP[ia][ib][i - 1][ii - 8];
 									distanceScore += tempS;
@@ -569,12 +579,12 @@ int countAva(vector<int> pie, int deep, vector<unsigned int> curPiece, int AEMin
 		{
 			for (int i = 8; i < 15; i++)
 			{
-				if (curPiece[i] && i != 13)//curp!=0 ª©­±¤W¦s¦b
+				if (curPiece[i] && i != 13)//curp!=0 ç‰ˆé¢ä¸Šå­˜åœ¨
 				{
 					unsigned int tempcpa = curPiece[i];
 					while (tempcpa)
 					{
-						unsigned int a = LS1B(tempcpa);//¤@­Ó¤@­Ó³B²z 
+						unsigned int a = LS1B(tempcpa);//ä¸€å€‹ä¸€å€‹è™•ç† 
 						tempcpa = tempcpa ^ a;
 						for (int ii = i - 7; ii < 8; ii++)
 						{
@@ -584,10 +594,10 @@ int countAva(vector<int> pie, int deep, vector<unsigned int> curPiece, int AEMin
 								unsigned int tempcpb = curPiece[ii];
 								while (tempcpb)
 								{
-									unsigned int b = LS1B(tempcpb);//¤@­Ó¤@­Ó³B²z 
+									unsigned int b = LS1B(tempcpb);//ä¸€å€‹ä¸€å€‹è™•ç† 
 									tempcpb = tempcpb ^ b;
-									int ia = GetIndex(a);//±o¨ìaªºindex 0~31
-									int ib = GetIndex(b);//±o¨ìbªºindex
+									int ia = GetIndex(a);//å¾—åˆ°açš„index 0~31
+									int ib = GetIndex(b);//å¾—åˆ°bçš„index
 
 									int tempS = DistanceP[ia][ib][i - 8][ii - 1];
 									distanceScore += tempS;
@@ -599,7 +609,7 @@ int countAva(vector<int> pie, int deep, vector<unsigned int> curPiece, int AEMin
 			}
 		}
 	}
-	//------------------------------------------------------²¾°Ê¼Æ 
+	//------------------------------------------------------ç§»å‹•æ•¸ 
 	int movePoint = 0;
 	if (curPiece[15] != 0) {
 		if (deep % 2 == 0)
@@ -621,25 +631,27 @@ int countAva(vector<int> pie, int deep, vector<unsigned int> curPiece, int AEMin
 			movePoint = EAOMindex - AEMindex * 80 - AOMindex;
 		}
 	}
-	//------------------------------------------------------¥[Á`
+	//------------------------------------------------------åŠ ç¸½
 	return power + movePoint - deep + distanceScore;
 
 }
 
-int search(int depth, vector<unsigned int>curPiece, vector<int> curPie, int alpha, int beta, vector<int> lDCount, unsigned int hashvalue)
+int search(int depth, vector<unsigned int> curPiece, vector<int> curPie, int alpha, int beta, vector<int> lDCount, unsigned int hashvalue)
 {
-	/*if (double(stop - start) > TimeLimit) {
+	if (double(stop - start) > TimeLimit) {
 		TimeOut = 1;
 		return 0;
-	}*/
+	}
 	stop = clock();
 	TotalSearch++;
+
 	unsigned int hashindex = hashvalue;
 	int tempscore = 0;
 	int HashCheck = 0;
 	unsigned int HashTempC1;
 	unsigned int HashTempC2;
-	/*if (hashtable[hashindex].count != 0) {
+	/*
+	if (hashtable.find(hashindex) != hashtable.end()) {
 		HashHit++;
 		if (hashtable[hashindex].depth % 2 == depth % 2) {
 			HashHitSameTurn++;
@@ -663,7 +675,6 @@ int search(int depth, vector<unsigned int>curPiece, vector<int> curPie, int alph
 					}
 				}
 				else {
-
 					if (depth > noReDepth && hashtable[hashindex].NextHashvalue) {
 						MoreDepth++;
 						if (0) {
@@ -676,36 +687,37 @@ int search(int depth, vector<unsigned int>curPiece, vector<int> curPie, int alph
 							int tempNextCurPie = hashtable[hashindex].NextCurPie;
 							int tempc1p = hashtable[hashindex].NextCurPiece[2];
 							int tempc2p = hashtable[hashindex].NextCurPiece[3];
+
 							if (tempNextCurPie !=-1) {//sim
-								curPiece[hashtable[hashindex].NextCurPiece[2]] ^= hashtable[hashindex].NextCurPiece[0];//²M°£­ì¦ì¸mc1
-								curPiece[hashtable[hashindex].NextCurPiece[2]] |= hashtable[hashindex].NextCurPiece[1];//²¾°Ê
-								curPiece[0] |= hashtable[hashindex].NextCurPiece[0];//ªÅ®æ+c1
-								curPiece[hashtable[hashindex].NextCurPiece[3]] ^= hashtable[hashindex].NextCurPiece[1];//²M°£­ì¦ì¸mc2
+								curPiece[hashtable[hashindex].NextCurPiece[2]] ^= hashtable[hashindex].NextCurPiece[0];//æ¸…é™¤åŸä½ç½®c1
+								curPiece[hashtable[hashindex].NextCurPiece[2]] |= hashtable[hashindex].NextCurPiece[1];//ç§»å‹•
+								curPiece[0] |= hashtable[hashindex].NextCurPiece[0];//ç©ºæ ¼+c1
+								curPiece[hashtable[hashindex].NextCurPiece[3]] ^= hashtable[hashindex].NextCurPiece[1];//æ¸…é™¤åŸä½ç½®c2
 								curPie[hashtable[hashindex].NextCurPie]--;
 							}
 							else {
-								curPiece[hashtable[hashindex].NextCurPiece[2]] ^= hashtable[hashindex].NextCurPiece[0];//²M°£­ì¦ì¸mc1
-								curPiece[hashtable[hashindex].NextCurPiece[2]] |= hashtable[hashindex].NextCurPiece[1];//²¾°Ê
-								curPiece[0] |= hashtable[hashindex].NextCurPiece[0];//ªÅ®æ+c1
-								curPiece[0] ^= hashtable[hashindex].NextCurPiece[1];//ªÅ®æ-c2
+								curPiece[hashtable[hashindex].NextCurPiece[2]] ^= hashtable[hashindex].NextCurPiece[0];//æ¸…é™¤åŸä½ç½®c1
+								curPiece[hashtable[hashindex].NextCurPiece[2]] |= hashtable[hashindex].NextCurPiece[1];//ç§»å‹•
+								curPiece[0] |= hashtable[hashindex].NextCurPiece[0];//ç©ºæ ¼+c1
+								curPiece[0] ^= hashtable[hashindex].NextCurPiece[1];//ç©ºæ ¼-c2
 							}
 
 							HashTempC1 = hashtable[hashindex].NextCurPiece[0];
 							HashTempC2 = hashtable[hashindex].NextCurPiece[1];
-							tempscore = search(depth + 1, curPiece, curPie, alpha, beta, hashtable[hashindex].NextHashvalue);
+							tempscore = search(depth + 1, curPiece, curPie, alpha, beta, hashtable[hashindex].lDCount, hashtable[hashindex].NextHashvalue);
 
 							if (tempNextCurPie != -1) {//unsim
-								curPiece[tempc1p] ^= HashTempC2;//²M°£­ì¦ì¸mc2
-								curPiece[tempc1p] |= HashTempC1;//²¾°Ê
-								curPiece[0] ^= HashTempC1;//ªÅ®æ-c1
-								curPiece[tempc2p] |= HashTempC2;//¦^­ì¦ì¸mc2
+								curPiece[tempc1p] ^= HashTempC2;//æ¸…é™¤åŸä½ç½®c2
+								curPiece[tempc1p] |= HashTempC1;//ç§»å‹•
+								curPiece[0] ^= HashTempC1;//ç©ºæ ¼-c1
+								curPiece[tempc2p] |= HashTempC2;//å›åŸä½ç½®c2
 								curPie[tempNextCurPie]++;
 							}
 							else {
-								curPiece[tempc1p] ^= HashTempC2;//²M°£­ì¦ì¸mc2
-								curPiece[0] |= HashTempC2;//ªÅ®æ+c2
-								curPiece[tempc1p] |= HashTempC1;//²¾°Ê
-								curPiece[0] ^= HashTempC1;//ªÅ®æ-c1
+								curPiece[tempc1p] ^= HashTempC2;//æ¸…é™¤åŸä½ç½®c2
+								curPiece[0] |= HashTempC2;//ç©ºæ ¼+c2
+								curPiece[tempc1p] |= HashTempC1;//ç§»å‹•
+								curPiece[0] ^= HashTempC1;//ç©ºæ ¼-c1
 							}
 
 							if (depth % 2 == 0)//max
@@ -745,33 +757,37 @@ int search(int depth, vector<unsigned int>curPiece, vector<int> curPie, int alph
 			}
 			else {//hash collision
 				hashtable[hashindex].NextHashvalue = 0;
-				memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
+				hashtable[hashindex].curPiece.assign(curPiece.begin(), curPiece.end());
+				hashtable[hashindex].lDCount.assign(lDCount.begin(), lDCount.end());
 			}
 		}
-		else {//¼h¼Æ¤£¦P
+		else {//å±¤æ•¸ä¸åŒ
 		hashtable[hashindex].NextHashvalue = 0;
-		memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
+		hashtable[hashindex].curPiece.assign(curPiece.begin(), curPiece.end());
+		hashtable[hashindex].lDCount.assign(lDCount.begin(), lDCount.end());
 		}
 	}
-	else {//·s½L­±
-		memcpy(hashtable[hashindex].curPiece, curPiece, sizeof(hashtable[hashindex].curPiece));
-	}*/
-	int taEM[50][2];//¦s¥i¦Y¤lªº¤èªk 0 src 1 dst Á×§K³Q©¹¤U·j´M®É¨ê±¼
-	int taOM[50][2];//¦s¥i²¾°Ê«D¦Y¤lªº¤èªk 0 src 1 dst
+	else {//æ–°ç›¤é¢
+		hashtable[hashindex].curPiece.assign(curPiece.begin(), curPiece.end());
+		hashtable[hashindex].lDCount.assign(lDCount.begin(), lDCount.end());
+	}
+	*/
+	int taEM[50][2];//å­˜å¯åƒå­çš„æ–¹æ³• 0 src 1 dst é¿å…è¢«å¾€ä¸‹æœå°‹æ™‚åˆ·æ‰
+	int taOM[50][2];//å­˜å¯ç§»å‹•éåƒå­çš„æ–¹æ³• 0 src 1 dst
 	int tAEMi;//alleatmove index
 	int tAOMi;//allonlymove index
 	int tEAEMi;//allonlymove index
 	int tEAOMi;//allonlymove index
 	chess(curPiece, depth, tAEMi, tAOMi, tEAEMi, tEAOMi, taEM, taOM);//void chess(unsigned int tpiece[16], int deep,int AEMindex,int AOMindex ,int EAEMindex ,int EAOMindex , unsigned int allEatMove[50][2] , unsigned int allOnlyMove[50][2])
-
-	vector<int> weights;//­pºâ©Ò¦³²¾°Ê»PÂ½´Ñªº¦ì¸msrc
-	vector<int> weightd;//­pºâ©Ò¦³²¾°Ê»PÂ½´Ñªº¦ì¸mdst
-	vector<int> weight;//­pºâ©Ò¦³²¾°Ê»PÂ½´Ñªº±o¤À
+	vector<int> weights;//è¨ˆç®—æ‰€æœ‰ç§»å‹•èˆ‡ç¿»æ£‹çš„ä½ç½®src
+	vector<int> weightd;//è¨ˆç®—æ‰€æœ‰ç§»å‹•èˆ‡ç¿»æ£‹çš„ä½ç½®dst
+	vector<int> weight;//è¨ˆç®—æ‰€æœ‰ç§»å‹•èˆ‡ç¿»æ£‹çš„å¾—åˆ†
 	int wp = 0;
 	int best = -9999999;
 	if (depth % 2 == 1) {
 		best = 9999999;
 	}
+
 	if (HashCheck) {
 		weight.push_back(tempscore);
 		best = tempscore;
@@ -779,20 +795,21 @@ int search(int depth, vector<unsigned int>curPiece, vector<int> curPie, int alph
 		weightd.push_back(100);
 		wp++;
 	}
-	for (int i = 0; i < tAEMi; i++)//¦Y¤l
+
+	for (int i = 0; i < tAEMi; i++)//åƒå­
 	{
 		int deeper = depth + 1;
 		int c1p, c2p = -1;
 		unsigned int c1 = 1 << taEM[i][0];
 		unsigned int c2 = 1 << taEM[i][1];
-		for (int ii = 1; ii < 15; ii++) {//§ä¨ìc1 ©ñ¤Jc1p  
+		for (int ii = 1; ii < 15; ii++) {//æ‰¾åˆ°c1 æ”¾å…¥c1p  
 			unsigned int check = curPiece[ii] & c1;
 			if (check != 0) {
 				c1p = ii;
 				break;
 			}
 		}
-		for (int ii = 1; ii < 15; ii++) {//§äc2
+		for (int ii = 1; ii < 15; ii++) {//æ‰¾c2
 			unsigned int check = curPiece[ii] & c2;
 			if (check != 0) {
 				c2p = ii;
@@ -808,10 +825,10 @@ int search(int depth, vector<unsigned int>curPiece, vector<int> curPie, int alph
 			cout << "depth: " << depth << endl;
 			cout << endl;
 		}
-		curPiece[c1p] ^= c1;//²M°£­ì¦ì¸mc1
-		curPiece[c1p] |= c2;//²¾°Ê
-		curPiece[0] |= c1;//ªÅ®æ+c1
-		curPiece[c2p] ^= c2;//²M°£­ì¦ì¸mc2
+		curPiece[c1p] ^= c1;//æ¸…é™¤åŸä½ç½®c1
+		curPiece[c1p] |= c2;//ç§»å‹•
+		curPiece[0] |= c1;//ç©ºæ ¼+c1
+		curPiece[c2p] ^= c2;//æ¸…é™¤åŸä½ç½®c2
 		curPie[c2p - 1]--;
 		unsigned int tempc1 = c1;
 		unsigned int tempc2 = c2;
@@ -819,42 +836,42 @@ int search(int depth, vector<unsigned int>curPiece, vector<int> curPie, int alph
 		unsigned int tempc2p = c2p;
 		int tempNextCurPie = c2p - 1;
 		unsigned int tempNextHashvalue = hashvalue ^ randtable[c1p - 1][GetIndex(c1)] ^ randtable[c2p - 1][GetIndex(c2)] ^ randtable[c1p - 1][GetIndex(c2)];
-
-		/*if (HashCheck == 1) {
+		if (HashCheck == 1) {
 			if (c1 == HashTempC1 && c2 == HashTempC2) {
-				curPiece[c1p] ^= c2;//²M°£­ì¦ì¸mc2
-				curPiece[c1p] |= c1;//²¾°Ê
-				curPiece[0] ^= c1;//ªÅ®æ-c1
-				curPiece[c2p] |= c2;//¦^­ì¦ì¸mc2
+				curPiece[c1p] ^= c2;//æ¸…é™¤åŸä½ç½®c2
+				curPiece[c1p] |= c1;//ç§»å‹•
+				curPiece[0] ^= c1;//ç©ºæ ¼-c1
+				curPiece[c2p] |= c2;//å›åŸä½ç½®c2
 				curPie[c2p - 1]++;
 				continue;
 			}
 			else {
 			}
-		}*/
+		}
 		weights.push_back(taEM[i][0]);
 		weightd.push_back(taEM[i][1]);
 		vector<unsigned int> tcurPiece;
 		vector<int> tcurPie;
 		vector<int> tlDCount;
-		tcurPiece.assign(curPiece.begin(), curPiece.end());
+
+		/*tcurPiece.assign(curPiece.begin(), curPiece.end());
 		tcurPie.assign(curPie.begin(), curPie.end());
-		tlDCount.assign(lDCount.begin(), lDCount.end());
+		tlDCount.assign(lDCount.begin(), lDCount.end());*/
+
 		int tempweight = 0;
-		tempweight = search(deeper, tcurPiece, tcurPie, alpha, beta, tlDCount, hashvalue ^ randtable[c1p - 1][GetIndex(c1)] ^ randtable[c2p - 1][GetIndex(c2)] ^ randtable[c1p - 1][GetIndex(c2)]);
+		tempweight = search(deeper, curPiece, curPie, alpha, beta, lDCount, hashvalue ^ randtable[c1p - 1][GetIndex(c1)] ^ randtable[c2p - 1][GetIndex(c2)] ^ randtable[c1p - 1][GetIndex(c2)]);
 		weight.push_back(tempweight);
 		if (depth == 0)
 		{
 			int r = rand() % 6;;
-			string a[6] = { "¡ó3¡óe","(--;)e","(¡²£s¡²)e","(¡¦-_-`)e","|£s£»¡^e","(*¡ÙÊJ¡Ø)e" };
+			string a[6] = { "âŠ™3âŠ™e","(--;)e","(ã€ƒÏ‰ã€ƒ)e","(â€™-_-`)e","|Ï‰Ë™ï¼‰e","(*â‰§è‰¸â‰¦)e" };
 			cout << a[r] + ".";
 		}
-		curPiece[c1p] ^= c2;//²M°£­ì¦ì¸mc2
-		curPiece[c1p] |= c1;//²¾°Ê
-		curPiece[0] ^= c1;//ªÅ®æ-c1
-		curPiece[c2p] |= c2;//¦^­ì¦ì¸mc2
+		curPiece[c1p] ^= c2;//æ¸…é™¤åŸä½ç½®c2
+		curPiece[c1p] |= c1;//ç§»å‹•
+		curPiece[0] ^= c1;//ç©ºæ ¼-c1
+		curPiece[c2p] |= c2;//å›åŸä½ç½®c2
 		curPie[c2p - 1]++;
-
 		if (depth % 2 == 0)//max
 		{
 			if (weight[wp] > alpha)
@@ -913,13 +930,13 @@ int search(int depth, vector<unsigned int>curPiece, vector<int> curPie, int alph
 		hashtable[hashindex].MaxDepth = maxDepth;*/
 		return re;
 	}
-	for (int i = 0; i < tAOMi; i++)//¯Â²¾°Ê --------------------------------------------------------------------------------------------------------
+	for (int i = 0; i < tAOMi; i++)//ç´”ç§»å‹• --------------------------------------------------------------------------------------------------------
 	{
 		int deeper = depth + 1;
 		int c1p = -1;
 		unsigned int c1 = 1 << taOM[i][0];
 		unsigned int c2 = 1 << taOM[i][1];
-		for (int ii = 1; ii < 15; ii++) {//§ä§LºØ
+		for (int ii = 1; ii < 15; ii++) {//æ‰¾å…µç¨®
 			unsigned int check = curPiece[ii] & c1;
 			if (check != 0) {
 				c1p = ii;
@@ -936,10 +953,10 @@ int search(int depth, vector<unsigned int>curPiece, vector<int> curPie, int alph
 			cout << endl;
 		}
 
-		curPiece[c1p] ^= c1;//²M°£­ì¦ì¸mc1
-		curPiece[c1p] |= c2;//²¾°Ê
-		curPiece[0] |= c1;//ªÅ®æ+c1
-		curPiece[0] ^= c2;//ªÅ®æ-c2
+		curPiece[c1p] ^= c1;//æ¸…é™¤åŸä½ç½®c1
+		curPiece[c1p] |= c2;//ç§»å‹•
+		curPiece[0] |= c1;//ç©ºæ ¼+c1
+		curPiece[0] ^= c2;//ç©ºæ ¼-c2
 
 		unsigned int tempc1 = c1;
 		unsigned int tempc2 = c2;
@@ -947,39 +964,41 @@ int search(int depth, vector<unsigned int>curPiece, vector<int> curPie, int alph
 		int tempNextCurPie = -1;
 		unsigned int tempNextHashvalue = hashvalue ^ randtable[c1p - 1][GetIndex(c1)] ^ randtable[c1p - 1][GetIndex(c2)];
 
-		/*if (HashCheck == 1) {
+		if (HashCheck == 1) {
 			if (c1 == HashTempC1 && c2 == HashTempC2) {
-				curPiece[c1p] ^= c2;//²M°£­ì¦ì¸mc2
-				curPiece[0] |= c2;//ªÅ®æ+c2
-				curPiece[c1p] |= c1;//²¾°Ê
-				curPiece[0] ^= c1;//ªÅ®æ-c1
+				curPiece[c1p] ^= c2;//æ¸…é™¤åŸä½ç½®c2
+				curPiece[0] |= c2;//ç©ºæ ¼+c2
+				curPiece[c1p] |= c1;//ç§»å‹•
+				curPiece[0] ^= c1;//ç©ºæ ¼-c1
 				continue;
 			}
 			else {
 			}
-		}*/
+		}
 
 		weights.push_back(taOM[i][0]);
 		weightd.push_back(taOM[i][1]);
 		vector<unsigned int> tcurPiece;
 		vector<int> tcurPie;
 		vector<int> tlDCount;
-		tcurPiece.assign(curPiece.begin(), curPiece.end());
+
+		/*tcurPiece.assign(curPiece.begin(), curPiece.end());
 		tcurPie.assign(curPie.begin(), curPie.end());
-		tlDCount.assign(lDCount.begin(), lDCount.end());
+		tlDCount.assign(lDCount.begin(), lDCount.end());*/
+
 		int tempweight = 0;
-		tempweight = search(deeper, tcurPiece, tcurPie, alpha, beta, tlDCount, hashvalue ^ randtable[c1p - 1][GetIndex(c1)] ^ randtable[c1p - 1][GetIndex(c2)]);
+		tempweight = search(deeper, curPiece, curPie, alpha, beta, lDCount, hashvalue ^ randtable[c1p - 1][GetIndex(c1)] ^ randtable[c1p - 1][GetIndex(c2)]);
 		weight.push_back(tempweight);
 		if (depth == 0)
 		{
 			int r = rand() % 6;;
-			string a[6] = { "¡ó3¡óm","(--;)m","(¡²£s¡²)m","(¡¦-_-`)m","|£s£»¡^m","(*¡ÙÊJ¡Ø)m" };
+			string a[6] = { "âŠ™3âŠ™m","(--;)m","(ã€ƒÏ‰ã€ƒ)m","(â€™-_-`)m","|Ï‰Ë™ï¼‰m","(*â‰§è‰¸â‰¦)m" };
 			cout << a[r] + ".";
 		}
-		curPiece[c1p] ^= c2;//²M°£­ì¦ì¸mc2
-		curPiece[0] |= c2;//ªÅ®æ+c2
-		curPiece[c1p] |= c1;//²¾°Ê
-		curPiece[0] ^= c1;//ªÅ®æ-c1
+		curPiece[c1p] ^= c2;//æ¸…é™¤åŸä½ç½®c2
+		curPiece[0] |= c2;//ç©ºæ ¼+c2
+		curPiece[c1p] |= c1;//ç§»å‹•
+		curPiece[0] ^= c1;//ç©ºæ ¼-c1
 
 
 
@@ -1031,16 +1050,16 @@ int search(int depth, vector<unsigned int>curPiece, vector<int> curPie, int alph
 		wp++;
 	}
 
-	if (curPiece[15] != 0)//¥ı¸ÕÂ½´Ñ °µ§¹«ácall search 
+	if (curPiece[15] != 0)//å…ˆè©¦ç¿»æ£‹ åšå®Œå¾Œcall search 
 	{
-		for (int ssrc = 0; ssrc < 32; ssrc++) { //·j´M½L­±¤W 32 ­Ó¦ì¸m
+		for (int ssrc = 0; ssrc < 32; ssrc++) { //æœå°‹ç›¤é¢ä¸Š 32 å€‹ä½ç½®
 
 
-			if (curPiece[15] & (1 << ssrc) && ch & (1 << ssrc) && depth <= noReDepth) { //­Y¬°¥¼Â½¤l ¦b¥¼Â½¤lªº¾B¸n¤º depth<=noReDepth 
+			if (curPiece[15] & (1 << ssrc) && ch & (1 << ssrc) && depth <= noReDepth) { //è‹¥ç‚ºæœªç¿»å­ åœ¨æœªç¿»å­çš„é®ç½©å…§ depth<=noReDepth 
 				if (depth == 0)
 				{
 					int r = rand() % 6;;
-					string a[6] = { "¡ó3¡óf","(--;)f","(¡²£s¡²)f","(¡¦-_-`)f","|£s£»¡^f","(*¡ÙÊJ¡Ø)f" };
+					string a[6] = { "âŠ™3âŠ™f","(--;)f","(ã€ƒÏ‰ã€ƒ)f","(â€™-_-`)f","|Ï‰Ë™ï¼‰f","(*â‰§è‰¸â‰¦)f" };
 					cout << a[r] + ".";
 				}
 				int a = 0;
@@ -1048,29 +1067,29 @@ int search(int depth, vector<unsigned int>curPiece, vector<int> curPie, int alph
 				weights.push_back(ssrc);
 				weightd.push_back(ssrc);
 #pragma omp parallel  for default(none) firstprivate(curPiece) reduction(+:tempweight,a)     
-				for (int pID = 0; pID < 14; pID++) { //·j´M¥i¯à·|Â½¥X¤§¤l
-					if (lDCount[pID]) { //­Y¸Ó§LºØ¥i¯à³QÂ½¥X
+				for (int pID = 0; pID < 14; pID++) { //æœå°‹å¯èƒ½æœƒç¿»å‡ºä¹‹å­
+					if (lDCount[pID]) { //è‹¥è©²å…µç¨®å¯èƒ½è¢«ç¿»å‡º
 						a += lDCount[pID];
 						int deeper = depth + 1;
 						unsigned int c = 1 << ssrc;
 						int cpID = pID + 1;
 
-						curPiece[cpID] |= c;//¼ÒÀÀ¸Ó§LºØÂ½¥X¨Ó
+						curPiece[cpID] |= c;//æ¨¡æ“¬è©²å…µç¨®ç¿»å‡ºä¾†
 						curPiece[15] ^= c;
 
 						vector<unsigned int> tcurPiece;
 						vector<int> tcurPie;
 						vector<int> tlDCount;
-						tcurPiece.assign(curPiece.begin(), curPiece.end());
+
+						/*tcurPiece.assign(curPiece.begin(), curPiece.end());
 						tcurPie.assign(curPie.begin(), curPie.end());
-						tlDCount.assign(lDCount.begin(), lDCount.end());
+						tlDCount.assign(lDCount.begin(), lDCount.end());*/
 
 						int ttempweight = 0;
-
-						ttempweight = ((lDCount[pID]) * search(deeper, tcurPiece, tcurPie, -999999, 999999, tlDCount, hashvalue ^ randtable[pID][ssrc] ^ randtable[14][ssrc]));
+						ttempweight = ((lDCount[pID]) * search(deeper, curPiece, curPie, -999999, 999999, lDCount, hashvalue ^ randtable[pID][ssrc] ^ randtable[14][ssrc]));
 						tempweight += ttempweight;
 
-						curPiece[cpID] ^= c;//±N¼ÒÀÀÂ½¥Xªº¤l´_­ì
+						curPiece[cpID] ^= c;//å°‡æ¨¡æ“¬ç¿»å‡ºçš„å­å¾©åŸ
 						curPiece[15] |= c;
 					}
 				}
@@ -1079,7 +1098,6 @@ int search(int depth, vector<unsigned int>curPiece, vector<int> curPie, int alph
 
 				tempweight /= a;
 				weight.push_back(tempweight);
-
 				if (depth % 2 == 0)//max
 				{
 					if (weight[wp] > alpha)
@@ -1119,18 +1137,20 @@ int search(int depth, vector<unsigned int>curPiece, vector<int> curPie, int alph
 			}
 		}
 	}
-	if (curPiece[15] != 0 && depth > noReDepth)//¥i¥H¨«ªÅ¨B
+	if (curPiece[15] != 0 && depth > noReDepth)//å¯ä»¥èµ°ç©ºæ­¥
 	{
 		vector<unsigned int> tcurPiece;
 		vector<int> tcurPie;
 		vector<int> tlDCount;
-		tcurPiece.assign(curPiece.begin(), curPiece.end());
+
+		/*tcurPiece.assign(curPiece.begin(), curPiece.end());
 		tcurPie.assign(curPie.begin(), curPie.end());
-		tlDCount.assign(lDCount.begin(), lDCount.end());
+		tlDCount.assign(lDCount.begin(), lDCount.end());*/
+
 		weights.push_back(0);
 		weightd.push_back(0);
 		int tempweight = 0;
-		tempweight = search(depth + 1, tcurPiece, tcurPie, alpha, beta, tlDCount, hashvalue);
+		tempweight = search(depth + 1, curPiece, curPie, alpha, beta, lDCount, hashvalue);
 		weight.push_back(tempweight);
 		wp++;
 	}
@@ -1166,7 +1186,7 @@ int search(int depth, vector<unsigned int>curPiece, vector<int> curPie, int alph
 		{
 			int loseOne = 0;
 			unsigned int c1 = 1 << srci;
-			for (int ii = 1; ii < 15; ii++) {//§ä§LºØ
+			for (int ii = 1; ii < 15; ii++) {//æ‰¾å…µç¨®
 				unsigned int check = curPiece[ii] & c1;
 				if (check != 0) {
 					if (ii < 8) {
@@ -1179,14 +1199,14 @@ int search(int depth, vector<unsigned int>curPiece, vector<int> curPie, int alph
 				}
 			}
 
-			if (best - loseOne < 0); //¥i¯à¿é ¬G·N¥­¤â? 
+			if (best - loseOne < 0); //å¯èƒ½è¼¸ æ•…æ„å¹³æ‰‹? 
 			else if (srci == past_walk[1][1] && dsti == past_walk[1][0])
 			{
 				cout << "draw denied" << endl;
-				weight[recordi] -= 999999;//¥i¯à·|Ä¹ ¿ï¾Ü¤£¥­¤â? 
+				weight[recordi] -= 999999;//å¯èƒ½æœƒè´ é¸æ“‡ä¸å¹³æ‰‹? 
 				best = weight[0];
 
-				for (int ii = wp - 1; ii >= 0; ii--)//­«·s´M§ä 
+				for (int ii = wp - 1; ii >= 0; ii--)//é‡æ–°å°‹æ‰¾ 
 				{
 					if (weight[ii] > best)
 					{
@@ -1247,22 +1267,22 @@ void drawOrNot()
 int findPiece(int place, unsigned int curPiece[16])
 {
 	unsigned int bplace = 1 << place;
-	for (int i = 1; i < 15; i++)//§ä14ºØ´Ñ¤¤ ½Ö¦b³o­Ó¦ì¸m¤W 
+	for (int i = 1; i < 15; i++)//æ‰¾14ç¨®æ£‹ä¸­ èª°åœ¨é€™å€‹ä½ç½®ä¸Š 
 	{
 		if ((curPiece[i] & bplace) != 0)
 		{
 			i--;
-			return i;//§ä¨ì´Ñ¤l¦^¶Ç 
+			return i;//æ‰¾åˆ°æ£‹å­å›å‚³ 
 		}
 	}
-	return -1;//¿ù»~ 
+	return -1;//éŒ¯èª¤ 
 }
 
-void readBoard()//ÅªÀÉ¼Ò¦¡ Åª¨úboard.txt±M¥Î 
+void readBoard()//è®€æª”æ¨¡å¼ è®€å–board.txtå°ˆç”¨ 
 {
 	vector<string> move;
-	int cp = 0;//current_position­pºâ¦ì§} 
-	int line = 0;//¥Ø«eÅª¨ìªº¦æ¼Æ 
+	int cp = 0;//current_positionè¨ˆç®—ä½å€ 
+	int line = 0;//ç›®å‰è®€åˆ°çš„è¡Œæ•¸ 
 	ifstream file;
 	string str;
 	file.open("board.txt", ios::in);
@@ -1277,14 +1297,14 @@ void readBoard()//ÅªÀÉ¼Ò¦¡ Åª¨úboard.txt±M¥Î
 		{
 			for (int i = 0; i <= 13; i++)
 			{
-				piece_count[i] = str[i * 2 + 2] - '0';//§â³Ñ¾l´Ñ¤lÅª¤Jpiece_count 
+				piece_count[i] = str[i * 2 + 2] - '0';//æŠŠå‰©é¤˜æ£‹å­è®€å…¥piece_count 
 			}
 		}
 		if (line >= 3 && line <= 10 && initailBoard == 1)
 		{
 			for (int i = 0; i <= 3; i++)
 			{
-				current_position[cp] = str[i * 2 + 2];//Åª¤Jªì©l³õ¤Wª¬ªp ¥uÅª¤@¦¸ 
+				current_position[cp] = str[i * 2 + 2];//è®€å…¥åˆå§‹å ´ä¸Šç‹€æ³ åªè®€ä¸€æ¬¡ 
 				cp++;
 			}
 			if (line == 10)
@@ -1320,29 +1340,29 @@ void readBoard()//ÅªÀÉ¼Ò¦¡ Åª¨úboard.txt±M¥Î
 
 	}
 	file.close();
-	if (first && !move.empty()) {//¥ı¤â ³B²z§Ú¤èÃC¦â 
-		if (move[0].at(3) - 91 > 0)//¤p¼g
-			color = 1;//¶Â
+	if (first && !move.empty()) {//å…ˆæ‰‹ è™•ç†æˆ‘æ–¹é¡è‰² 
+		if (move[0].at(3) - 91 > 0)//å°å¯«
+			color = 1;//é»‘
 		else
-			color = 0;//¬õ
+			color = 0;//ç´…
 	}
-	else if (!move.empty()) {//«á¤â
-		if (move[0].at(3) - 91 > 0)//¤p¼g
-			color = 0;//¬õ
+	else if (!move.empty()) {//å¾Œæ‰‹
+		if (move[0].at(3) - 91 > 0)//å°å¯«
+			color = 0;//ç´…
 		else
-			color = 1;//¶Â
+			color = 1;//é»‘
 	}
 	else {
 		color = 0;
 	}
 	//cout << "color(b0 r1 u-1): " << color<<"\n";
-	for (int i = 0; i < move.size(); i++) {//record in char board[4][8] ³B²zhistory ²£¥Í²{¦b´Ñª© 
+	for (int i = 0; i < move.size(); i++) {//record in char board[4][8] è™•ç†history ç”¢ç”Ÿç¾åœ¨æ£‹ç‰ˆ 
 		//cout<<i<<move[i].at(0)<<move[i].at(1)<<move[i].at(2)<<endl;
 		if (move[i].at(2) == '(') {//record move 'flip' (kgmrncp)
 			//string a=move[i].substr(0,2);
 			int aa = 100 - move[i].at(0);
 			int bb = 4 * (56 - move[i].at(1));
-			unsigned int cc = aa + bb;//´Ñ½L½s¸¹0~31
+			unsigned int cc = aa + bb;//æ£‹ç›¤ç·¨è™Ÿ0~31
 			cc = 1 << cc;
 			if (move[i].at(3) == 'K') { piece[1] |= cc; red |= cc; piece[15] ^= cc; DCount[0]--; }
 			if (move[i].at(3) == 'G') { piece[2] |= cc; red |= cc; piece[15] ^= cc; DCount[1]--; }
@@ -1361,12 +1381,12 @@ void readBoard()//ÅªÀÉ¼Ò¦¡ Åª¨úboard.txt±M¥Î
 			//board[move[i].at(0)-'a'][move[i].at(1)-'1'] = move[i].at(3);	//board[a][1]=k,ai(k)
 			//cout << board[move[i].at(0) - 'a'][move[i].at(1) - '1'] ;
 		}
-		else {//a1-b1¤§Ãş 
+		else {//a1-b1ä¹‹é¡ 
 			int c1p, c2p;
-			c2p = -1;//¦pªG¬O-1¬°²¾°Ê 
+			c2p = -1;//å¦‚æœæ˜¯-1ç‚ºç§»å‹• 
 			int aa = 100 - move[i].at(0);
 			int bb = 4 * (56 - move[i].at(1));
-			unsigned int c1 = aa + bb;//´Ñ½L½s¸¹0~31
+			unsigned int c1 = aa + bb;//æ£‹ç›¤ç·¨è™Ÿ0~31
 			past_walk[6][0] = past_walk[5][0];
 			past_walk[5][0] = past_walk[4][0];
 			past_walk[4][0] = past_walk[3][0];
@@ -1379,7 +1399,7 @@ void readBoard()//ÅªÀÉ¼Ò¦¡ Åª¨úboard.txt±M¥Î
 
 			int aaa = 100 - move[i].at(3);
 			int bbb = 4 * (56 - move[i].at(4));
-			unsigned int c2 = aaa + bbb;//´Ñ½L½s¸¹0~31
+			unsigned int c2 = aaa + bbb;//æ£‹ç›¤ç·¨è™Ÿ0~31
 			past_walk[6][1] = past_walk[5][1];
 			past_walk[5][1] = past_walk[4][1];
 			past_walk[4][1] = past_walk[3][1];
@@ -1396,44 +1416,44 @@ void readBoard()//ÅªÀÉ¼Ò¦¡ Åª¨úboard.txt±M¥Î
 					break;
 				}
 			}
-			for (int ii = 1; ii < 15; ii++) {//§äc2 ²M±¼ ³Ñ¾l´Ñ¤l¼Æ§ó§ï 
+			for (int ii = 1; ii < 15; ii++) {//æ‰¾c2 æ¸…æ‰ å‰©é¤˜æ£‹å­æ•¸æ›´æ”¹ 
 				unsigned int check = piece[ii] & c2;
 				if (check != 0) {
 					c2p = ii;
 				}
 			}
-			piece[c1p] ^= c1;//²M°£­ì¦ì¸mc1
-			piece[0] |= c1;//ªÅ®æ+c1
-			piece[c1p] |= c2;//²¾°Ê
-			if (c2p != -1) {//¦Y¤l²¾°Ê 
-				piece[c2p] ^= c2;//²M°£­ì¦ì¸mc2
+			piece[c1p] ^= c1;//æ¸…é™¤åŸä½ç½®c1
+			piece[0] |= c1;//ç©ºæ ¼+c1
+			piece[c1p] |= c2;//ç§»å‹•
+			if (c2p != -1) {//åƒå­ç§»å‹• 
+				piece[c2p] ^= c2;//æ¸…é™¤åŸä½ç½®c2
 				int c2ps = c2p - 1;
 				piece_count[c2ps]--;
-				if (8 > c1p) {//¬õ¦Y¶Â
+				if (8 > c1p) {//ç´…åƒé»‘
 					red ^= c1;
 					black ^= c2;
 					red |= c2;
 				}
-				else {//¶Â¦Y¬õ 
+				else {//é»‘åƒç´… 
 					black ^= c1;
 					red ^= c2;
 					black |= c2;
 				}
-				occupied ^= c1;//c1µL¤l 
+				occupied ^= c1;//c1ç„¡å­ 
 			}
-			else//µL¦Y¤l²¾°Ê 
+			else//ç„¡åƒå­ç§»å‹• 
 			{
-				if (8 > c1p) {//¬õ°Ê 
+				if (8 > c1p) {//ç´…å‹• 
 					red ^= c1;
 					red |= c2;
 				}
-				else {//¶Â°Ê 
+				else {//é»‘å‹• 
 					black ^= c1;
 					black |= c2;
 				}
-				piece[0] ^= c2;//ªÅ®æ-c2
-				occupied ^= c1;//c1µL¤l 
-				occupied |= c2;//c2¦³¤l 
+				piece[0] ^= c2;//ç©ºæ ¼-c2
+				occupied ^= c1;//c1ç„¡å­ 
+				occupied |= c2;//c2æœ‰å­ 
 			}
 			//board[move[i].at(3) - 'a'][move[i].at(4) - '1'] = board[move[i].at(0) - 'a'][move[i].at(1) - '1'];	//board[a][2]=k, a1-a2
 			//board[move[i].at(0) - 'a'][move[i].at(1) - '1'] = '-';												//board[a][1]='-', a1-a2
@@ -1443,7 +1463,7 @@ void readBoard()//ÅªÀÉ¼Ò¦¡ Åª¨úboard.txt±M¥Î
 	//cout<<hex<<piece[9];
 }
 
-void createMovetxt(string src, string dst, int srci, int dsti)//­I´º¼Ò¦¡ 
+void createMovetxt(string src, string dst, int srci, int dsti)//èƒŒæ™¯æ¨¡å¼ 
 {
 	fstream file;
 	file.open("move.txt", ios::out);
@@ -1464,7 +1484,6 @@ void initial()
 	random_device rd;
 	default_random_engine gen = default_random_engine(rd());
 	uniform_int_distribution<unsigned int> dis(pow(2, 31), pow(2, 32) - 1);
-
 	for (int i = 0; i <= 14; i++)
 		piece[i] = 0;
 	for (int i = 0; i < 15; i++) {
@@ -1523,12 +1542,12 @@ void IndexToBoard(int indexa, int indexb, string& src, string& dst)
 
 unsigned int myhash(unsigned int tpiece[16]) {
 	unsigned int hashvalue = 0;
-	for (int i = 1; i < 16; i++) { //1~14 ¬°Âù¤è§LºØ 0ªÅ®æ 15 ¥¼Â½
-		unsigned int p = tpiece[i]; //¨ú±o´Ñ¤l¦ì¸m
-		while (p) { //±N1~15 ¸¹ªº¤l³£·j´M¤@¹M
-			unsigned int mask = LS1B(p); //¦pªG¸Ó´Ñ¤l¦b¦h­Ó¦ì¸m,¥ı¨ú§C¦ì¤¸ªº¦ì¸m¡C
-			p ^= mask; //°£¥h¦ì©ó³Ì§C¦ì¤¸ªº¸Ó§LºØ
-			hashvalue ^= randtable[i - 1][GetIndex(mask)]; //±N³Ì§C¦ì¤¸ªº§LºØ¦ì¸mªºÀH¾÷­Èxor hashtable
+	for (int i = 1; i < 16; i++) { //1~14 ç‚ºé›™æ–¹å…µç¨® 0ç©ºæ ¼ 15 æœªç¿»
+		unsigned int p = tpiece[i]; //å–å¾—æ£‹å­ä½ç½®
+		while (p) { //å°‡1~15 è™Ÿçš„å­éƒ½æœå°‹ä¸€é
+			unsigned int mask = LS1B(p); //å¦‚æœè©²æ£‹å­åœ¨å¤šå€‹ä½ç½®,å…ˆå–ä½ä½å…ƒçš„ä½ç½®ã€‚
+			p ^= mask; //é™¤å»ä½æ–¼æœ€ä½ä½å…ƒçš„è©²å…µç¨®
+			hashvalue ^= randtable[i - 1][GetIndex(mask)]; //å°‡æœ€ä½ä½å…ƒçš„å…µç¨®ä½ç½®çš„éš¨æ©Ÿå€¼xor hashtable
 		}
 	}
 	return hashvalue;
