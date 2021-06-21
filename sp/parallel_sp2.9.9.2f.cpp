@@ -12,10 +12,11 @@
 #include <map>
 #include <iomanip>
 #include "score.h"
+#include "omp.h"
 
 using namespace std;
 /*
-	翻棋平行化
+	翻棋平行化 無同型表
 */
 
 
@@ -30,12 +31,12 @@ unsigned int CGenCR(unsigned int x);
 unsigned int CGenCL(unsigned int x);
 int BitsHash(unsigned int x) { return (x * 0x08ED2BE6) >> 27; }
 void initial();//初始化 
-void chess(const vector<unsigned int>& tpiece, int deep, int& EAEMindex, int& EAOMindex, vector<int>& allEatMove, vector<int>& allOnlyMove);//尋找可用移動
+void chess(int deep);//尋找可用移動
 void readBoard();//讀檔模式 讀取board.txt 把讀入檔案轉成bitboard 還沒倒著存入 
 void createMovetxt(string src, string dst, int srci, int dsti);//創造move.txt 0走步 1翻棋 
 void IndexToBoard(int indexa, int indexb, string& src, string& dst);//把src dst從編號0~31->棋盤編號a1~d4 
-int countAva(const vector<int> &pie, int deep, const vector<unsigned int> &curPiece, int AEMindex, int AOMindex, int EAEMindex, int EAOMindex);//呼叫則傳回當前棋版
-int search(int depth, vector<unsigned int> curPiece, vector<int> curPie, int alpha, int beta, vector<int> lDCount, unsigned int hashvalue);//搜尋最佳走步
+int countAva(int deep, int tAEMindex, int tAOMindex, int tEAEMindex, int tEAOMindex);//呼叫則傳回當前棋版
+int search(int depth, int alpha, int beta, unsigned int hashvalue);//搜尋最佳走步
 void drawOrNot();//由past_walk判斷是否平手 之後結果輸出給draw 
 int findPiece(int place, unsigned int curPiece[16]);//傳編號 回傳在這個編號的棋子 
 unsigned int myhash(unsigned int tpiece[16]);//傳入盤面，傳回hash值
@@ -81,6 +82,15 @@ int initailBoard = 1;//是否讀取初始版面
 int past_walk[7][2] = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0 };//前七步 用來處理平局問題 
 int draw = 0;//0無平手情況 1有可能進入平手 
 //int RMcount=13;//讀取模式需要 從13行開始讀取結果 
+int threads = 8;
+
+int allEatMove[50][2];//存可吃子的方法 0 src 1 dst 可執行 
+int AEMindex;//alleatmove index
+int allOnlyMove[50][2];//存可移動非吃子的方法 0 src 1 dst
+int AOMindex;//allonlymove index
+int EAEMindex;//Ealleatmove index
+int EAOMindex;//Eallonlymove index
+#pragma omp threadprivate(piece,piece_count,DCount,allEatMove,allOnlyMove,AEMindex,AOMindex,EAEMindex,EAOMindex)
 
 int color;//0 red 1 black
 int maxDepth = 6;
@@ -90,8 +100,14 @@ int noReDepth = 1;
 unsigned int randtable[15][32]; //0~13 為雙方兵種 14 未翻
 
 struct hashdata {
-	int count; int depth; vector<unsigned int> curPiece;
-	vector<unsigned int> NextCurPiece; unsigned int NextHashvalue; int MaxDepth; int NextCurPie; vector<int> lDCount;
+	int count; int depth; unsigned int piece[16];
+	unsigned int NextCurPiece[4]; unsigned int NextHashvalue; int MaxDepth; int NextCurPie; int DCount[14];
+	hashdata() {
+		count = 0;
+		depth = 0;
+		NextHashvalue = 0;
+		MaxDepth = 0;
+	}
 };
 //unordered_map<unsigned int, hashdata > hashtable;
 //unordered_map<unsigned int, unsigned int > hashtablep;
@@ -112,21 +128,12 @@ clock_t start, stop;//程式執行時間
 int TimeOut;//是否超時
 int TimeLimit;//時間限制
 
-int test = 0;
-int test1 = 0;
-int test2 = 0;
-int test3 = 0;
-int test4 = 0;
-int test5 = 0;
-int test6 = 0;
-int test7 = 0;
-int test8 = 0;
-
 
 int main() {
 	start = clock();
 	srand(time(NULL));
 	initial();//初始化 
+
 	readBoard();
 	drawOrNot();
 	int onboardi = 0;//計算場面上未翻棋數量 
@@ -166,13 +173,9 @@ int main() {
 		HashHit = 0;
 		HashHitSameTurn = 0;
 		RealHit = 0;
-		vector<unsigned int> lcurPiece;
-		vector<int> lcurPie;
-		vector<int> lDCount;
-		lcurPiece.assign(piece, piece + 16);
-		lcurPie.assign(piece_count, piece_count + 14);
-		lDCount.assign(DCount, DCount + 14);
-		search(0, lcurPiece, lcurPie, -999999, 999999, lDCount, hashvalue);
+		//search1 next;
+		//next.search(0, lcurPiece, lcurPie, -999999, 999999, lDCount, hashvalue);
+		search(0, -999999, 999999, hashvalue);
 		stop = clock();
 		cout << " 此步耗時 : " << double(stop - start) / CLOCKS_PER_SEC << " 秒(精準度0.001秒) " << endl;
 		cout << " 深度 : " << maxDepth << endl;
@@ -192,87 +195,91 @@ int main() {
 	}
 }
 
-void chess(const vector<unsigned int> &tpiece, int deep,int& EAEMindex, int& EAOMindex, vector<int>&allEatMove, vector<int>&allOnlyMove)
+void chess(int deep)
 {
 	unsigned int tred, tblack;
 	unsigned int dest;//可以吃子的行動
+	AEMindex = 0;
+	AOMindex = 0;
 	EAEMindex = 0;
 	EAOMindex = 0;
 	unsigned int toccupied = 0xFFFFFFFF;
-	toccupied ^= tpiece[0];
-	tred = tpiece[1] | tpiece[2] | tpiece[3] | tpiece[4] | tpiece[5] | tpiece[6] | tpiece[7];
-	tblack = tpiece[8] | tpiece[9] | tpiece[10] | tpiece[11] | tpiece[12] | tpiece[13] | tpiece[14];
+	toccupied ^= piece[0];
+	tred = piece[1] | piece[2] | piece[3] | piece[4] | piece[5] | piece[6] | piece[7];
+	tblack = piece[8] | piece[9] | piece[10] | piece[11] | piece[12] | piece[13] | piece[14];
 	int ssrc = 0;
 	int check = (color + deep) % 2;//0red 1black
 	if (check == 0) {//紅 
 		//cout<<"Ours available eat:"<<endl;
 		for (int i = 1; i < 8; i++) { //1~7 為帥~兵,src 為棋子起點,dest 為終點。  先算我方 
-			unsigned int p = tpiece[i]; //取得棋子位置
+			unsigned int p = piece[i]; //取得棋子位置
 			while (p) { //將紅色 1~7 號的子都搜尋一遍
 				unsigned int mask = LS1B(p); //如果該棋子在多個位置,先取低位元的位置。
 				p ^= mask; //除去位於最低位元的該兵種
 				ssrc = GetIndex(mask); //將最低位元的兵種設為走步起點
 				if (i == 1) //帥,周圍卒(14)以外的黑子都可以吃。
-					dest = pMoves[ssrc] & (tblack ^ tpiece[14]);
+					dest = pMoves[ssrc] & (tblack ^ piece[14]);
 				else if (i == 2) //仕,周圍將(8)以外的黑子都可以吃。
-					dest = pMoves[ssrc] & (tblack ^ tpiece[8]);
+					dest = pMoves[ssrc] & (tblack ^ piece[8]);
 				else if (i == 3) //相,周圍將、士以外的黑子都可以吃。	
-					dest = pMoves[ssrc] & (tblack ^ tpiece[8] ^ tpiece[9]);
+					dest = pMoves[ssrc] & (tblack ^ piece[8] ^ piece[9]);
 				else if (i == 4) //?,只能吃車(11)、馬、炮、卒。
-					dest = pMoves[ssrc] & (tpiece[11] | tpiece[12] | tpiece[13] | tpiece[14]);
+					dest = pMoves[ssrc] & (piece[11] | piece[12] | piece[13] | piece[14]);
 				else if (i == 5) //傌,只能吃馬(12)、炮、卒。
-					dest = pMoves[ssrc] & (tpiece[12] | tpiece[13] | tpiece[14]);
+					dest = pMoves[ssrc] & (piece[12] | piece[13] | piece[14]);
 				else if (i == 6) //炮,特殊處理。
 					dest = CGen(ssrc, toccupied) & tblack;
 				else if (i == 7) //兵,只能吃將(8)、卒(14)。
-					dest = pMoves[ssrc] & (tpiece[8] | tpiece[14]);
+					dest = pMoves[ssrc] & (piece[8] | piece[14]);
 				else
 					dest = 0;
 				while (dest) { //如果 dest 有多個位置的話,分開存起來。
 					unsigned int mask2 = LS1B(dest);
 					dest ^= mask2;
 					int result = GetIndex(mask2);
-					allEatMove.push_back(ssrc);
-					allEatMove.push_back(result);
+					allEatMove[AEMindex][0] = ssrc;
+					allEatMove[AEMindex][1] = result;
+					AEMindex++;
 				}
 			}
 		}
 		for (int i = 1; i < 8; i++) { //紅方純移動
-			unsigned int p = tpiece[i]; //取得棋子位置
+			unsigned int p = piece[i]; //取得棋子位置
 			while (p) { //將紅色 1~7 號的子都搜尋一遍
 				unsigned int mask = LS1B(p); //如果該棋子在多個位置,先取低位元的位置。
 				p ^= mask; //除去位於最低位元的該兵種
 				ssrc = GetIndex(mask); //將最低位元的兵種設為走步起點
-				dest = pMoves[ssrc] & tpiece[0];//只走空格
+				dest = pMoves[ssrc] & piece[0];//只走空格
 				while (dest) { //如果 dest 有多個位置的話,分開存起來。
 					unsigned int mask2 = LS1B(dest);
 					dest ^= mask2;
 					int result = GetIndex(mask2);
-					allOnlyMove.push_back(ssrc);
-					allOnlyMove.push_back(result);
+					allOnlyMove[AOMindex][0] = ssrc;
+					allOnlyMove[AOMindex][1] = result;
+					AOMindex++;
 				}
 			}
 		}
 		for (int i = 8; i < 15; i++) { //再算對手行動 
-			unsigned int p = tpiece[i];
+			unsigned int p = piece[i];
 			while (p) {
 				unsigned int mask = LS1B(p);
 				p ^= mask;
 				ssrc = GetIndex(mask);
 				if (i == 8)
-					dest = pMoves[ssrc] & (tred ^ tpiece[7]);
+					dest = pMoves[ssrc] & (tred ^ piece[7]);
 				else if (i == 9) //仕,周圍將(8)以外的黑子都可以吃。
-					dest = pMoves[ssrc] & (tred ^ tpiece[1]);
+					dest = pMoves[ssrc] & (tred ^ piece[1]);
 				else if (i == 10) //相,周圍將、士以外的黑子都可以吃。	
-					dest = pMoves[ssrc] & (tred ^ tpiece[1] ^ tpiece[2]);
+					dest = pMoves[ssrc] & (tred ^ piece[1] ^ piece[2]);
 				else if (i == 11) //?,只能吃車(11)、馬、炮、卒。
-					dest = pMoves[ssrc] & (tpiece[4] | tpiece[5] | tpiece[6] | tpiece[7]);
+					dest = pMoves[ssrc] & (piece[4] | piece[5] | piece[6] | piece[7]);
 				else if (i == 12) //傌,只能吃馬(12)、炮、卒。
-					dest = pMoves[ssrc] & (tpiece[5] | tpiece[6] | tpiece[7]);
+					dest = pMoves[ssrc] & (piece[5] | piece[6] | piece[7]);
 				else if (i == 13) //炮,特殊處理。
 					dest = CGen(ssrc, toccupied) & tred;
 				else if (i == 14) //兵,只能吃將、卒(14)。
-					dest = pMoves[ssrc] & (tpiece[1] | tpiece[7]);
+					dest = pMoves[ssrc] & (piece[1] | piece[7]);
 				else
 					dest = 0;
 				while (dest) { //對手行動存入EallEatMove 
@@ -286,12 +293,12 @@ void chess(const vector<unsigned int> &tpiece, int deep,int& EAEMindex, int& EAO
 			}
 		}
 		for (int i = 8; i < 15; i++) { //對手純移動 
-			unsigned int p = tpiece[i]; //取得棋子位置
+			unsigned int p = piece[i]; //取得棋子位置
 			while (p) { //將黑色 8~14 號的子都搜尋一遍
 				unsigned int mask = LS1B(p); //如果該棋子在多個位置,先取低位元的位置。
 				p ^= mask; //除去位於最低位元的該兵種
 				ssrc = GetIndex(mask); //將最低位元的兵種設為走步起點
-				dest = pMoves[ssrc] & tpiece[0];//只走空格
+				dest = pMoves[ssrc] & piece[0];//只走空格
 				while (dest) { //如果 dest 有多個位置的話,分開存起來。
 					unsigned int mask2 = LS1B(dest);
 					dest ^= mask2;
@@ -305,72 +312,74 @@ void chess(const vector<unsigned int> &tpiece, int deep,int& EAEMindex, int& EAO
 	}
 	else {//黑方移動 
 		for (int i = 8; i < 15; i++) { //1~7 為帥~兵,src 為棋子起點,dest 為終點。
-			unsigned int p = tpiece[i]; //取得棋子位置
+			unsigned int p = piece[i]; //取得棋子位置
 			while (p) { //將黑色 1~7 號的子都搜尋一遍
 				unsigned int mask = LS1B(p); //如果該棋子在多個位置,先取低位元的位置。
 				p ^= mask; //除去位於最低位元的該兵種
 				ssrc = GetIndex(mask); //將最低位元的兵種設為走步起點
 				if (i == 8) //帥,周圍卒(14)以外的黑子都可以吃。
-					dest = pMoves[ssrc] & (tred ^ tpiece[7]);
+					dest = pMoves[ssrc] & (tred ^ piece[7]);
 				else if (i == 9) //仕,周圍將(8)以外的黑子都可以吃。
-					dest = pMoves[ssrc] & (tred ^ tpiece[1]);
+					dest = pMoves[ssrc] & (tred ^ piece[1]);
 				else if (i == 10) //相,周圍將、士以外的黑子都可以吃。	
-					dest = pMoves[ssrc] & (tred ^ tpiece[1] ^ tpiece[2]);
+					dest = pMoves[ssrc] & (tred ^ piece[1] ^ piece[2]);
 				else if (i == 11) //?,只能吃車(11)、馬、炮、卒。
-					dest = pMoves[ssrc] & (tpiece[4] | tpiece[5] | tpiece[6] | tpiece[7]);
+					dest = pMoves[ssrc] & (piece[4] | piece[5] | piece[6] | piece[7]);
 				else if (i == 12) //傌,只能吃馬(12)、炮、卒。
-					dest = pMoves[ssrc] & (tpiece[5] | tpiece[6] | tpiece[7]);
+					dest = pMoves[ssrc] & (piece[5] | piece[6] | piece[7]);
 				else if (i == 13) //炮,特殊處理。
 					dest = CGen(ssrc, toccupied) & tred;
 				else if (i == 14) //兵,只能吃將、卒(14)。
-					dest = pMoves[ssrc] & (tpiece[1] | tpiece[7]);
+					dest = pMoves[ssrc] & (piece[1] | piece[7]);
 				else
 					dest = 0;
 				while (dest) { //如果 dest 有多個位置的話,分開存起來。
 					unsigned int mask2 = LS1B(dest);
 					dest ^= mask2;
 					int result = GetIndex(mask2);
-					allEatMove.push_back(ssrc);
-					allEatMove.push_back(result);
+					allEatMove[AEMindex][0] = ssrc;
+					allEatMove[AEMindex][1] = result;
+					AEMindex++;
 				}
 			}
 		}
 		for (int i = 8; i < 15; i++) { //黑方純移動
-			unsigned int p = tpiece[i]; //取得棋子位置
+			unsigned int p = piece[i]; //取得棋子位置
 			while (p) { //將黑色 8~14 號的子都搜尋一遍
 				unsigned int mask = LS1B(p); //如果該棋子在多個位置,先取低位元的位置。
 				p ^= mask; //除去位於最低位元的該兵種
 				ssrc = GetIndex(mask); //將最低位元的兵種設為走步起點
-				dest = pMoves[ssrc] & tpiece[0];//只走空格
+				dest = pMoves[ssrc] & piece[0];//只走空格
 				while (dest) { //如果 dest 有多個位置的話,分開存起來。
 					unsigned int mask2 = LS1B(dest);
 					dest ^= mask2;
 					int result = GetIndex(mask2);
-					allOnlyMove.push_back(ssrc);
-					allOnlyMove.push_back(result);
+					allOnlyMove[AOMindex][0] = ssrc;
+					allOnlyMove[AOMindex][1] = result;
+					AOMindex++;
 				}
 			}
 		}
 		for (int i = 1; i < 8; i++) { //計算敵方移動 
-			unsigned int p = tpiece[i]; //取得棋子位置
+			unsigned int p = piece[i]; //取得棋子位置
 			while (p) { //將紅色 1~7 號的子都搜尋一遍
 				unsigned int mask = LS1B(p); //如果該棋子在多個位置,先取低位元的位置。
 				p ^= mask; //除去位於最低位元的該兵種
 				ssrc = GetIndex(mask); //將最低位元的兵種設為走步起點
 				if (i == 1) //帥,周圍卒(14)以外的黑子都可以吃。
-					dest = pMoves[ssrc] & (tblack ^ tpiece[14]);
+					dest = pMoves[ssrc] & (tblack ^ piece[14]);
 				else if (i == 2) //仕,周圍將(8)以外的黑子都可以吃。
-					dest = pMoves[ssrc] & (tblack ^ tpiece[8]);
+					dest = pMoves[ssrc] & (tblack ^ piece[8]);
 				else if (i == 3) //相,周圍將、士以外的黑子都可以吃。	
-					dest = pMoves[ssrc] & (tblack ^ tpiece[8] ^ tpiece[9]);
+					dest = pMoves[ssrc] & (tblack ^ piece[8] ^ piece[9]);
 				else if (i == 4) //?,只能吃車(11)、馬、炮、卒。
-					dest = pMoves[ssrc] & (tpiece[11] | tpiece[12] | tpiece[13] | tpiece[14]);
+					dest = pMoves[ssrc] & (piece[11] | piece[12] | piece[13] | piece[14]);
 				else if (i == 5) //傌,只能吃馬(12)、炮、卒。
-					dest = pMoves[ssrc] & (tpiece[12] | tpiece[13] | tpiece[14]);
+					dest = pMoves[ssrc] & (piece[12] | piece[13] | piece[14]);
 				else if (i == 6) //炮,特殊處理。
 					dest = CGen(ssrc, toccupied) & tblack;
 				else if (i == 7) //兵,只能吃將(8)、卒(14)。
-					dest = pMoves[ssrc] & (tpiece[8] | tpiece[14]);
+					dest = pMoves[ssrc] & (piece[8] | piece[14]);
 				else
 					dest = 0;
 				while (dest) { //如果 dest 有多個位置的話,分開存起來。
@@ -384,12 +393,12 @@ void chess(const vector<unsigned int> &tpiece, int deep,int& EAEMindex, int& EAO
 			}
 		}
 		for (int i = 1; i < 8; i++) { //紅方純移動
-			unsigned int p = tpiece[i]; //取得棋子位置
+			unsigned int p = piece[i]; //取得棋子位置
 			while (p) { //將紅色 1~7 號的子都搜尋一遍
 				unsigned int mask = LS1B(p); //如果該棋子在多個位置,先取低位元的位置。
 				p ^= mask; //除去位於最低位元的該兵種
 				ssrc = GetIndex(mask); //將最低位元的兵種設為走步起點
-				dest = pMoves[ssrc] & tpiece[0];//只走空格
+				dest = pMoves[ssrc] & piece[0];//只走空格
 				while (dest) { //如果 dest 有多個位置的話,分開存起來。
 					unsigned int mask2 = LS1B(dest);
 					dest ^= mask2;
@@ -489,25 +498,23 @@ unsigned int CGenCR(unsigned int x) {
 	else return 0;
 }
 
-int countAva(const vector<int> &pie, int deep, const vector<unsigned int> &curPiece, int AEMindex, int AOMindex, int EAEMindex, int EAOMindex)//將士相車馬炮兵
+int countAva(int deep, int tAEMindex, int tAOMindex, int tEAEMindex, int tEAOMindex)//將士相車馬炮兵
 {
 	int eat[10];
 	int power = 0;
 	int redleft = 0;
 	int blackleft = 0;
-	AEMindex /= 2;
-	EAEMindex /= 2;
 	if (color == 0)//紅 
 	{
 		for (int i = 0; i < 7; i++)
 		{
-			power += pie[i] * Power[pie[7]][pie[8]][pie[9]][pie[10]][pie[11]][pie[12]][pie[13]][i];
-			redleft += pie[i];
+			power += piece_count[i] * Power[piece_count[7]][piece_count[8]][piece_count[9]][piece_count[10]][piece_count[11]][piece_count[12]][piece_count[13]][i];
+			redleft += piece_count[i];
 		}
 		for (int i = 7; i < 14; i++)
 		{
-			power -= pie[i] * Power[pie[0]][pie[1]][pie[2]][pie[3]][pie[4]][pie[5]][pie[6]][i - 7];
-			blackleft += pie[i];
+			power -= piece_count[i] * Power[piece_count[0]][piece_count[1]][piece_count[2]][piece_count[3]][piece_count[4]][piece_count[5]][piece_count[6]][i - 7];
+			blackleft += piece_count[i];
 		}
 		if (redleft == 0) power = -100000 + deep * 1000;
 		if (blackleft == 0) power = 100000 - deep * 1000;
@@ -516,27 +523,27 @@ int countAva(const vector<int> &pie, int deep, const vector<unsigned int> &curPi
 	{
 		for (int i = 7; i < 14; i++)
 		{
-			power += pie[i] * Power[pie[0]][pie[1]][pie[2]][pie[3]][pie[4]][pie[5]][pie[6]][i - 7];
-			blackleft += pie[i];
+			power += piece_count[i] * Power[piece_count[0]][piece_count[1]][piece_count[2]][piece_count[3]][piece_count[4]][piece_count[5]][piece_count[6]][i - 7];
+			blackleft += piece_count[i];
 		}
 		for (int i = 0; i < 7; i++)
 		{
-			power -= pie[i] * Power[pie[7]][pie[8]][pie[9]][pie[10]][pie[11]][pie[12]][pie[13]][i];
-			redleft += pie[i];
+			power -= piece_count[i] * Power[piece_count[7]][piece_count[8]][piece_count[9]][piece_count[10]][piece_count[11]][piece_count[12]][piece_count[13]][i];
+			redleft += piece_count[i];
 		}
 		if (blackleft == 0) power = -100000 + deep * 1000;
 		if (redleft == 0) power = 100000 - deep * 1000;
 	}
 	//------------------------------------------------------判斷距離 
 	int distanceScore = 0;
-	if (curPiece[15] == 0) {
+	if (piece[15] == 0) {
 		if (color == 0)
 		{
 			for (int i = 1; i < 8; i++)
 			{
-				if (curPiece[i] && i != 6)//curp!=0 版面上存在
+				if (piece[i] && i != 6)//curp!=0 版面上存在
 				{
-					unsigned int tempcpa = curPiece[i];
+					unsigned int tempcpa = piece[i];
 					while (tempcpa)
 					{
 						unsigned int a = LS1B(tempcpa);//一個一個處理 
@@ -544,9 +551,9 @@ int countAva(const vector<int> &pie, int deep, const vector<unsigned int> &curPi
 						for (int ii = i + 7; ii < 15; ii++)
 						{
 							if (i == 1 && ii == 14) continue;
-							if (curPiece[ii])
+							if (piece[ii])
 							{
-								unsigned int tempcpb = curPiece[ii];
+								unsigned int tempcpb = piece[ii];
 								while (tempcpb)
 								{
 									unsigned int b = LS1B(tempcpb);//一個一個處理 
@@ -568,9 +575,9 @@ int countAva(const vector<int> &pie, int deep, const vector<unsigned int> &curPi
 		{
 			for (int i = 8; i < 15; i++)
 			{
-				if (curPiece[i] && i != 13)//curp!=0 版面上存在
+				if (piece[i] && i != 13)//curp!=0 版面上存在
 				{
-					unsigned int tempcpa = curPiece[i];
+					unsigned int tempcpa = piece[i];
 					while (tempcpa)
 					{
 						unsigned int a = LS1B(tempcpa);//一個一個處理 
@@ -578,9 +585,9 @@ int countAva(const vector<int> &pie, int deep, const vector<unsigned int> &curPi
 						for (int ii = i - 7; ii < 8; ii++)
 						{
 							if (i == 8 && ii == 7) continue;
-							if (curPiece[ii])
+							if (piece[ii])
 							{
-								unsigned int tempcpb = curPiece[ii];
+								unsigned int tempcpb = piece[ii];
 								while (tempcpb)
 								{
 									unsigned int b = LS1B(tempcpb);//一個一個處理 
@@ -600,24 +607,24 @@ int countAva(const vector<int> &pie, int deep, const vector<unsigned int> &curPi
 	}
 	//------------------------------------------------------移動數 
 	int movePoint = 0;
-	if (curPiece[15] != 0) {
+	if (piece[15] != 0) {
 		if (deep % 2 == 0)
 		{
-			movePoint = AEMindex * 20 + AOMindex - EAEMindex * 50 - EAOMindex;
+			movePoint = tAEMindex * 20 + tAOMindex - tEAEMindex * 50 - tEAOMindex;
 		}
 		else
 		{
-			movePoint = EAEMindex * 20 + EAOMindex - AEMindex * 50 - AOMindex;
+			movePoint = tEAEMindex * 20 + tEAOMindex - tAEMindex * 50 - tAOMindex;
 		}
 	}
 	else {
 		if (deep % 2 == 0)
 		{
-			movePoint = AOMindex - EAEMindex * 80 - EAOMindex;
+			movePoint = tAOMindex - tEAEMindex * 80 - tEAOMindex;
 		}
 		else
 		{
-			movePoint = EAOMindex - AEMindex * 80 - AOMindex;
+			movePoint = tEAOMindex - tAEMindex * 80 - tAOMindex;
 		}
 	}
 	//------------------------------------------------------加總
@@ -625,7 +632,7 @@ int countAva(const vector<int> &pie, int deep, const vector<unsigned int> &curPi
 
 }
 
-int search(int depth, vector<unsigned int> curPiece, vector<int> curPie, int alpha, int beta, vector<int> lDCount, unsigned int hashvalue)
+int search(int depth, int alpha, int beta, unsigned int hashvalue)
 {
 	if (double(stop - start) > TimeLimit) {
 		TimeOut = 1;
@@ -638,13 +645,14 @@ int search(int depth, vector<unsigned int> curPiece, vector<int> curPie, int alp
 	int HashCheck = 0;
 	unsigned int HashTempC1;
 	unsigned int HashTempC2;
+
 	if (hashtable[hashindex].count != 0) {
 		HashHit++;
 		if (hashtable[hashindex].depth % 2 == depth % 2) {
 			HashHitSameTurn++;
 			int temp = 0;
 			for (int i = 0; i < 16; i++) {
-				if (curPiece[i] ^ hashtable[hashindex].curPiece[i]) {
+				if (piece[i] ^ hashtable[hashindex].piece[i]) {
 					temp++;
 					break;
 				}
@@ -665,47 +673,47 @@ int search(int depth, vector<unsigned int> curPiece, vector<int> curPie, int alp
 					if (depth > noReDepth && hashtable[hashindex].NextHashvalue) {
 						MoreDepth++;
 						if (0) {
-							test++;
+
 						}
 						else {
-							test1++;
-							
+							/*
 							HashCheck = 1;
-
+							
 							int tempNextCurPie = hashtable[hashindex].NextCurPie;
+							int tempc1 = hashtable[hashindex].NextCurPiece[0];
+							int tempc2 = hashtable[hashindex].NextCurPiece[1];
 							int tempc1p = hashtable[hashindex].NextCurPiece[2];
 							int tempc2p = hashtable[hashindex].NextCurPiece[3];
+							unsigned int tempNextHashvalue = hashtable[hashindex].NextHashvalue;
 
-							if (tempNextCurPie !=-1) {//sim
-								curPiece[hashtable[hashindex].NextCurPiece[2]] ^= hashtable[hashindex].NextCurPiece[0];//清除原位置c1
-								curPiece[hashtable[hashindex].NextCurPiece[2]] |= hashtable[hashindex].NextCurPiece[1];//移動
-								curPiece[0] |= hashtable[hashindex].NextCurPiece[0];//空格+c1
-								curPiece[hashtable[hashindex].NextCurPiece[3]] ^= hashtable[hashindex].NextCurPiece[1];//清除原位置c2
-								curPie[hashtable[hashindex].NextCurPie]--;
+							if (tempNextCurPie != -1) {//sim
+								piece[tempc1p] ^= tempc1;//清除原位置c1
+								piece[tempc1p] |= tempc2;//移動
+								piece[0] |= tempc1;//空格+c1
+								piece[tempc2p] ^= tempc2;//清除原位置c2
+								piece_count[tempNextCurPie]--;
 							}
 							else {
-								curPiece[hashtable[hashindex].NextCurPiece[2]] ^= hashtable[hashindex].NextCurPiece[0];//清除原位置c1
-								curPiece[hashtable[hashindex].NextCurPiece[2]] |= hashtable[hashindex].NextCurPiece[1];//移動
-								curPiece[0] |= hashtable[hashindex].NextCurPiece[0];//空格+c1
-								curPiece[0] ^= hashtable[hashindex].NextCurPiece[1];//空格-c2
+								piece[tempc1p] ^= tempc1;//清除原位置c1
+								piece[tempc1p] |= tempc2;//移動
+								piece[0] |= tempc1;//空格+c1
+								piece[0] ^= tempc2;//空格-c2
 							}
 
-							HashTempC1 = hashtable[hashindex].NextCurPiece[0];
-							HashTempC2 = hashtable[hashindex].NextCurPiece[1];
-							tempscore = search(depth + 1, curPiece, curPie, alpha, beta, hashtable[hashindex].lDCount, hashtable[hashindex].NextHashvalue);
+							tempscore = search(depth + 1, alpha, beta, tempNextHashvalue);
 
 							if (tempNextCurPie != -1) {//unsim
-								curPiece[tempc1p] ^= HashTempC2;//清除原位置c2
-								curPiece[tempc1p] |= HashTempC1;//移動
-								curPiece[0] ^= HashTempC1;//空格-c1
-								curPiece[tempc2p] |= HashTempC2;//回原位置c2
-								curPie[tempNextCurPie]++;
+								piece[tempc1p] ^= tempc2;//清除原位置c2
+								piece[tempc1p] |= tempc1;//移動
+								piece[0] ^= tempc1;//空格-c1
+								piece[tempc2p] |= tempc2;//回原位置c2
+								piece_count[tempNextCurPie]++;
 							}
 							else {
-								curPiece[tempc1p] ^= HashTempC2;//清除原位置c2
-								curPiece[0] |= HashTempC2;//空格+c2
-								curPiece[tempc1p] |= HashTempC1;//移動
-								curPiece[0] ^= HashTempC1;//空格-c1
+								piece[tempc1p] ^= tempc2;//清除原位置c2
+								piece[0] |= tempc2;//空格+c2
+								piece[tempc1p] |= tempc1;//移動
+								piece[0] ^= tempc1;//空格-c1
 							}
 
 							if (depth % 2 == 0)//max
@@ -736,7 +744,7 @@ int search(int depth, vector<unsigned int> curPiece, vector<int> curPie, int alp
 									return beta;
 								}
 							}
-							
+							*/
 						}
 					}
 					else {
@@ -746,39 +754,35 @@ int search(int depth, vector<unsigned int> curPiece, vector<int> curPie, int alp
 			}
 			else {//hash collision
 				hashtable[hashindex].NextHashvalue = 0;
-				hashtable[hashindex].curPiece= curPiece;
-				hashtable[hashindex].lDCount= lDCount;
+				memcpy(hashtable[hashindex].piece, piece, sizeof(hashtable[hashindex].piece));
+				memcpy(hashtable[hashindex].DCount, DCount, sizeof(hashtable[hashindex].DCount));
 			}
 		}
 		else {//層數不同
-		hashtable[hashindex].NextHashvalue = 0;
-		hashtable[hashindex].curPiece = curPiece;
-		hashtable[hashindex].lDCount = lDCount;
+			hashtable[hashindex].NextHashvalue = 0;
+			memcpy(hashtable[hashindex].piece, piece, sizeof(hashtable[hashindex].piece));
+			memcpy(hashtable[hashindex].DCount, DCount, sizeof(hashtable[hashindex].DCount));
 		}
 	}
 	else {//新盤面
-	/*
-	struct hashdata {
-	int count; int depth; vector<unsigned int> curPiece;
-	unsigned int NextCurPiece[4]; unsigned int NextHashvalue; int MaxDepth; int NextCurPie; vector<int> lDCount;
-};
-	*/
-		hashtable[hashindex].count = 0;
 		hashtable[hashindex].depth = depth;
-		hashtable[hashindex].curPiece = curPiece;
-		hashtable[hashindex].NextHashvalue = 0;
 		hashtable[hashindex].MaxDepth = maxDepth;
-		hashtable[hashindex].lDCount = lDCount;
+		memcpy(hashtable[hashindex].piece, piece, sizeof(hashtable[hashindex].piece));
+		memcpy(hashtable[hashindex].DCount, DCount, sizeof(hashtable[hashindex].DCount));
 	}
-	vector<int> taEM;//存可吃子的方法 0 src 1 dst 避免被往下搜尋時刷掉
-	vector<int> taOM;//存可移動非吃子的方法 0 src 1 dst
-	int tAEMi;//alleatmove index
-	int tAOMi;//allonlymove index
-	int tEAEMi;//allonlymove index
-	int tEAOMi;//allonlymove index
-	chess(curPiece, depth,tEAEMi, tEAOMi, taEM, taOM);//void chess(unsigned int tpiece[16], int deep,int AEMindex,int AOMindex ,int EAEMindex ,int EAOMindex , unsigned int allEatMove[50][2] , unsigned int allOnlyMove[50][2])
-	tAEMi = taEM.size();
-	tAOMi = taOM.size();
+
+	chess(depth);//void chess(unsigned int tpiece[16], int deep,int AEMindex,int AOMindex ,int EAEMindex ,int EAOMindex , unsigned int allEatMove[50][2] , unsigned int allOnlyMove[50][2])
+
+	unsigned int taEM[50][2];//存可吃子的方法 0 src 1 dst 避免被往下搜尋時刷掉
+	unsigned int taOM[50][2];//存可移動非吃子的方法 0 src 1 dst
+	int tAEMi = AEMindex;//alleatmove index
+	int tAOMi = AOMindex;//allonlymove index
+	int tEAEMi = EAEMindex;//allonlymove index
+	int tEAOMi = EAOMindex;//allonlymove index
+	memcpy(taEM, allEatMove, sizeof(taEM));
+	memcpy(taOM, allOnlyMove, sizeof(taOM));
+
+
 
 	vector<int> weights;//計算所有移動與翻棋的位置src
 	vector<int> weightd;//計算所有移動與翻棋的位置dst
@@ -797,40 +801,44 @@ int search(int depth, vector<unsigned int> curPiece, vector<int> curPie, int alp
 		wp++;
 	}
 
-	for (int i = 0; i < tAEMi; i+=2)//吃子
+	for (int i = 0; i < tAEMi; i++)//吃子
 	{
 		int deeper = depth + 1;
 		int c1p, c2p = -1;
-		unsigned int c1 = 1 << taEM[i];
-		unsigned int c2 = 1 << taEM[i+1];
+		unsigned int c1 = 1 << taEM[i][0];
+		unsigned int c2 = 1 << taEM[i][1];
 		for (int ii = 1; ii < 15; ii++) {//找到c1 放入c1p  
-			unsigned int check = curPiece[ii] & c1;
+			unsigned int check = piece[ii] & c1;
 			if (check != 0) {
 				c1p = ii;
 				break;
 			}
 		}
 		for (int ii = 1; ii < 15; ii++) {//找c2
-			unsigned int check = curPiece[ii] & c2;
+			unsigned int check = piece[ii] & c2;
 			if (check != 0) {
 				c2p = ii;
 				break;
 			}
 		}
 		if (c2p == -1 || c1p == -1) {//errrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
-			cout << endl;
-			cout << "err1 c1: " << hex << c1 << " c2: " << c2 << endl;
-			for (int j = 0; j < 16; j++) {
-				cout << hex << curPiece[j] << dec << endl;
+#pragma omp critical
+			{
+				cout << endl;
+				cout << "err1 c1: " << hex << c1 << " c2: " << c2 << endl;
+				cout << "depth: " << depth << endl;
+
+				for (int j = 0; j < 16; j++) {
+					cout << hex << piece[j] << dec << endl;
+
+				}
 			}
-			cout << "depth: " << depth << endl;
-			cout << endl;
 		}
-		curPiece[c1p] ^= c1;//清除原位置c1
-		curPiece[c1p] |= c2;//移動
-		curPiece[0] |= c1;//空格+c1
-		curPiece[c2p] ^= c2;//清除原位置c2
-		curPie[c2p - 1]--;
+		piece[c1p] ^= c1;//清除原位置c1
+		piece[c1p] |= c2;//移動
+		piece[0] |= c1;//空格+c1
+		piece[c2p] ^= c2;//清除原位置c2
+		piece_count[c2p - 1]--;
 		unsigned int tempc1 = c1;
 		unsigned int tempc2 = c2;
 		unsigned int tempc1p = c1p;
@@ -839,28 +847,28 @@ int search(int depth, vector<unsigned int> curPiece, vector<int> curPie, int alp
 		unsigned int tempNextHashvalue = hashvalue ^ randtable[c1p - 1][GetIndex(c1)] ^ randtable[c2p - 1][GetIndex(c2)] ^ randtable[c1p - 1][GetIndex(c2)];
 		if (HashCheck == 1) {
 			if (c1 == HashTempC1 && c2 == HashTempC2) {
-				curPiece[c1p] ^= c2;//清除原位置c2
-				curPiece[c1p] |= c1;//移動
-				curPiece[0] ^= c1;//空格-c1
-				curPiece[c2p] |= c2;//回原位置c2
-				curPie[c2p - 1]++;
+				piece[c1p] ^= c2;//清除原位置c2
+				piece[c1p] |= c1;//移動
+				piece[0] ^= c1;//空格-c1
+				piece[c2p] |= c2;//回原位置c2
+				piece_count[c2p - 1]++;
 				continue;
 			}
 			else {
 			}
 		}
-		weights.push_back(taEM[i]);
-		weightd.push_back(taEM[i+1]);
+		weights.push_back(taEM[i][0]);
+		weightd.push_back(taEM[i][1]);
 		vector<unsigned int> tcurPiece;
 		vector<int> tcurPie;
 		vector<int> tlDCount;
 
-		/*tcurPiece.assign(curPiece.begin(), curPiece.end());
-		tcurPie.assign(curPie.begin(), curPie.end());
+		/*tcurPiece.assign(piece.begin(), piece.end());
+		tcurPie.assign(piece_count.begin(), piece_count.end());
 		tlDCount.assign(lDCount.begin(), lDCount.end());*/
 
 		int tempweight = 0;
-		tempweight = search(deeper, curPiece, curPie, alpha, beta, lDCount, hashvalue ^ randtable[c1p - 1][GetIndex(c1)] ^ randtable[c2p - 1][GetIndex(c2)] ^ randtable[c1p - 1][GetIndex(c2)]);
+		tempweight = search(deeper, alpha, beta, hashvalue ^ randtable[c1p - 1][GetIndex(c1)] ^ randtable[c2p - 1][GetIndex(c2)] ^ randtable[c1p - 1][GetIndex(c2)]);
 		weight.push_back(tempweight);
 		if (depth == 0)
 		{
@@ -868,11 +876,11 @@ int search(int depth, vector<unsigned int> curPiece, vector<int> curPie, int alp
 			string a[6] = { "⊙3⊙e","(--;)e","(〃ω〃)e","(’-_-`)e","|ω˙）e","(*≧艸≦)e" };
 			cout << a[r] + ".";
 		}
-		curPiece[c1p] ^= c2;//清除原位置c2
-		curPiece[c1p] |= c1;//移動
-		curPiece[0] ^= c1;//空格-c1
-		curPiece[c2p] |= c2;//回原位置c2
-		curPie[c2p - 1]++;
+		piece[c1p] ^= c2;//清除原位置c2
+		piece[c1p] |= c1;//移動
+		piece[0] ^= c1;//空格-c1
+		piece[c2p] |= c2;//回原位置c2
+		piece_count[c2p - 1]++;
 		if (depth % 2 == 0)//max
 		{
 			if (weight[wp] > alpha)
@@ -921,39 +929,44 @@ int search(int depth, vector<unsigned int> curPiece, vector<int> curPie, int alp
 		wp++;
 	}
 
-	if (depth >= maxDepth)
+	if (depth >= maxDepth)//到底 --------------------------------------------------------------------------------------------------------
 	{
-		int re = countAva(curPie, depth, curPiece, tAEMi, tAOMi, tEAEMi, tEAOMi);
+		int re = countAva(depth, tAEMi, tAOMi, tEAEMi, tEAOMi);
 		hashtable[hashindex].count = re;
 		return re;
 	}
-	for (int i = 0; i < tAOMi; i+=2)//純移動 --------------------------------------------------------------------------------------------------------
+
+	for (int i = 0; i < tAOMi; i++)//純移動 --------------------------------------------------------------------------------------------------------
 	{
 		int deeper = depth + 1;
 		int c1p = -1;
-		unsigned int c1 = 1 << taOM[i];
-		unsigned int c2 = 1 << taOM[i+1];
+		unsigned int c1 = 1 << taOM[i][0];
+		unsigned int c2 = 1 << taOM[i][1];
 		for (int ii = 1; ii < 15; ii++) {//找兵種
-			unsigned int check = curPiece[ii] & c1;
+			unsigned int check = piece[ii] & c1;
 			if (check != 0) {
 				c1p = ii;
 				break;
 			}
 		}
 		if (c1p == -1) {//errrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrrr
-			cout << endl;
-			cout << "err2 c1: " << hex << c1 << " c2: " << c2 << endl;
-			for (int j = 0; j < 16; j++) {
-				cout << hex << curPiece[j] << dec << endl;
+#pragma omp critical
+			{
+				cout << endl;
+				cout << "err2 c1: " << hex << c1 << " c2: " << c2 << endl;
+				cout << "depth: " << depth << endl;
+
+				for (int j = 0; j < 16; j++) {
+					cout << hex << piece[j] << dec << endl;
+				}
+
 			}
-			cout << "depth: " << depth << endl;
-			cout << endl;
 		}
 
-		curPiece[c1p] ^= c1;//清除原位置c1
-		curPiece[c1p] |= c2;//移動
-		curPiece[0] |= c1;//空格+c1
-		curPiece[0] ^= c2;//空格-c2
+		piece[c1p] ^= c1;//清除原位置c1
+		piece[c1p] |= c2;//移動
+		piece[0] |= c1;//空格+c1
+		piece[0] ^= c2;//空格-c2
 
 		unsigned int tempc1 = c1;
 		unsigned int tempc2 = c2;
@@ -963,28 +976,28 @@ int search(int depth, vector<unsigned int> curPiece, vector<int> curPie, int alp
 
 		if (HashCheck == 1) {
 			if (c1 == HashTempC1 && c2 == HashTempC2) {
-				curPiece[c1p] ^= c2;//清除原位置c2
-				curPiece[0] |= c2;//空格+c2
-				curPiece[c1p] |= c1;//移動
-				curPiece[0] ^= c1;//空格-c1
+				piece[c1p] ^= c2;//清除原位置c2
+				piece[0] |= c2;//空格+c2
+				piece[c1p] |= c1;//移動
+				piece[0] ^= c1;//空格-c1
 				continue;
 			}
 			else {
 			}
 		}
 
-		weights.push_back(taOM[i]);
-		weightd.push_back(taOM[i+1]);
+		weights.push_back(taOM[i][0]);
+		weightd.push_back(taOM[i][1]);
 		vector<unsigned int> tcurPiece;
 		vector<int> tcurPie;
 		vector<int> tlDCount;
 
-		/*tcurPiece.assign(curPiece.begin(), curPiece.end());
-		tcurPie.assign(curPie.begin(), curPie.end());
+		/*tcurPiece.assign(piece.begin(), piece.end());
+		tcurPie.assign(piece_count.begin(), piece_count.end());
 		tlDCount.assign(lDCount.begin(), lDCount.end());*/
 
 		int tempweight = 0;
-		tempweight = search(deeper, curPiece, curPie, alpha, beta, lDCount, hashvalue ^ randtable[c1p - 1][GetIndex(c1)] ^ randtable[c1p - 1][GetIndex(c2)]);
+		tempweight = search(deeper, alpha, beta, hashvalue ^ randtable[c1p - 1][GetIndex(c1)] ^ randtable[c1p - 1][GetIndex(c2)]);
 		weight.push_back(tempweight);
 		if (depth == 0)
 		{
@@ -992,10 +1005,10 @@ int search(int depth, vector<unsigned int> curPiece, vector<int> curPie, int alp
 			string a[6] = { "⊙3⊙m","(--;)m","(〃ω〃)m","(’-_-`)m","|ω˙）m","(*≧艸≦)m" };
 			cout << a[r] + ".";
 		}
-		curPiece[c1p] ^= c2;//清除原位置c2
-		curPiece[0] |= c2;//空格+c2
-		curPiece[c1p] |= c1;//移動
-		curPiece[0] ^= c1;//空格-c1
+		piece[c1p] ^= c2;//清除原位置c2
+		piece[0] |= c2;//空格+c2
+		piece[c1p] |= c1;//移動
+		piece[0] ^= c1;//空格-c1
 
 
 
@@ -1045,12 +1058,12 @@ int search(int depth, vector<unsigned int> curPiece, vector<int> curPie, int alp
 		wp++;
 	}
 
-	if (curPiece[15] != 0)//先試翻棋 做完後call search 
+	if (piece[15] != 0)//先試翻棋 做完後call search 
 	{
 		for (int ssrc = 0; ssrc < 32; ssrc++) { //搜尋盤面上 32 個位置
 
 
-			if (curPiece[15] & (1 << ssrc) && ch & (1 << ssrc) && depth <= noReDepth) { //若為未翻子 在未翻子的遮罩內 depth<=noReDepth 
+			if (piece[15] & (1 << ssrc) && ch & (1 << ssrc) && depth <= noReDepth) { //若為未翻子 在未翻子的遮罩內 depth<=noReDepth 
 				if (depth == 0)
 				{
 					int r = rand() % 6;;
@@ -1061,31 +1074,26 @@ int search(int depth, vector<unsigned int> curPiece, vector<int> curPie, int alp
 				int tempweight = 0;
 				weights.push_back(ssrc);
 				weightd.push_back(ssrc);
-#pragma omp parallel  for default(none) firstprivate(curPiece) reduction(+:tempweight,a)     
+#pragma omp parallel  for default(none) reduction(+:tempweight,a) num_threads(threads) copyin(piece,piece_count,DCount)
 				for (int pID = 0; pID < 14; pID++) { //搜尋可能會翻出之子
-					if (lDCount[pID]) { //若該兵種可能被翻出
-						a += lDCount[pID];
+					if (DCount[pID]) { //若該兵種可能被翻出
+						a += DCount[pID];
 						int deeper = depth + 1;
 						unsigned int c = 1 << ssrc;
 						int cpID = pID + 1;
 
-						curPiece[cpID] |= c;//模擬該兵種翻出來
-						curPiece[15] ^= c;
-
-						vector<unsigned int> tcurPiece;
-						vector<int> tcurPie;
-						vector<int> tlDCount;
-
-						/*tcurPiece.assign(curPiece.begin(), curPiece.end());
-						tcurPie.assign(curPie.begin(), curPie.end());
-						tlDCount.assign(lDCount.begin(), lDCount.end());*/
+						piece[cpID] |= c;//模擬該兵種翻出來
+						piece[15] ^= c;
+						DCount[pID]--;
 
 						int ttempweight = 0;
-						ttempweight = ((lDCount[pID]) * search(deeper, curPiece, curPie, -999999, 999999, lDCount, hashvalue ^ randtable[pID][ssrc] ^ randtable[14][ssrc]));
+						ttempweight = search(deeper, -999999, 999999, hashvalue ^ randtable[pID][ssrc] ^ randtable[14][ssrc]);
+						DCount[pID]++;
+						ttempweight *= DCount[pID];
 						tempweight += ttempweight;
 
-						curPiece[cpID] ^= c;//將模擬翻出的子復原
-						curPiece[15] |= c;
+						piece[cpID] ^= c;//將模擬翻出的子復原
+						piece[15] |= c;
 					}
 				}
 				//if (weights.back() > 32)cout << weights.back() << endl;
@@ -1130,27 +1138,16 @@ int search(int depth, vector<unsigned int> curPiece, vector<int> curPie, int alp
 			}
 		}
 	}
-	if (curPiece[15] != 0 && depth > noReDepth)//可以走空步
+	if (piece[15] != 0 && depth > noReDepth)//可以走空步
 	{
-		vector<unsigned int> tcurPiece;
-		vector<int> tcurPie;
-		vector<int> tlDCount;
-
-		/*tcurPiece.assign(curPiece.begin(), curPiece.end());
-		tcurPie.assign(curPie.begin(), curPie.end());
-		tlDCount.assign(lDCount.begin(), lDCount.end());*/
 
 		weights.push_back(0);
 		weightd.push_back(0);
 		int tempweight = 0;
-		tempweight = search(depth + 1, curPiece, curPie, alpha, beta, lDCount, hashvalue);
+		tempweight = search(depth + 1, alpha, beta, hashvalue);
 		weight.push_back(tempweight);
 		wp++;
 	}
-
-	/*for (int i = 0; i < 32; i++) {
-		if (weightU[wp][0] > 32)cout << weightU[wp][0] << endl;
-	}*/
 
 	if (depth == 0)//root
 	{
@@ -1180,13 +1177,13 @@ int search(int depth, vector<unsigned int> curPiece, vector<int> curPie, int alp
 			int loseOne = 0;
 			unsigned int c1 = 1 << srci;
 			for (int ii = 1; ii < 15; ii++) {//找兵種
-				unsigned int check = curPiece[ii] & c1;
+				unsigned int check = piece[ii] & c1;
 				if (check != 0) {
 					if (ii < 8) {
-						loseOne = Power[curPie[7]][curPie[8]][curPie[9]][curPie[10]][curPie[11]][curPie[12]][curPie[13]][ii - 1];
+						loseOne = Power[piece_count[7]][piece_count[8]][piece_count[9]][piece_count[10]][piece_count[11]][piece_count[12]][piece_count[13]][ii - 1];
 					}
 					else {
-						loseOne = Power[curPie[0]][curPie[1]][curPie[2]][curPie[3]][curPie[4]][curPie[5]][curPie[6]][ii - 8];
+						loseOne = Power[piece_count[0]][piece_count[1]][piece_count[2]][piece_count[3]][piece_count[4]][piece_count[5]][piece_count[6]][ii - 8];
 					}
 					break;
 				}
@@ -1213,8 +1210,8 @@ int search(int depth, vector<unsigned int> curPiece, vector<int> curPie, int alp
 		IndexToBoard(srci, dsti, src, dst);
 		createMovetxt(src, dst, srci, dsti);
 	}
-	if (wp == 0) best = countAva(curPie, depth, curPiece, tAEMi, tAOMi, tEAEMi, tEAOMi);
-	if (best == 9999999 || best == -9999999) best = countAva(curPie, depth, curPiece, tAEMi, tAOMi, tEAEMi, tEAOMi);
+	if (wp == 0) best = countAva(depth, tAEMi, tAOMi, tEAEMi, tEAOMi);
+	if (best == 9999999 || best == -9999999) best = countAva(depth, tAEMi, tAOMi, tEAEMi, tEAOMi);;
 	hashtable[hashindex].count = best;
 	return best;
 }
@@ -1474,8 +1471,8 @@ void initial()
 {
 	random_device rd;
 	default_random_engine gen = default_random_engine(rd());
-	long hashsize = pow(2, 20);
-	uniform_int_distribution<unsigned int> dis(1, hashsize -1);
+	int hashsize = pow(2, 22);
+	uniform_int_distribution<unsigned int> dis(1, hashsize - 1);
 	for (int i = 0; i <= 14; i++)
 		piece[i] = 0;
 	for (int i = 0; i < 15; i++) {
@@ -1504,18 +1501,14 @@ void initial()
 	score score;
 	score.dynamicPower(Power);
 	score.CreateDistanceP(DistanceP);
-	for (long i = 0; i < hashsize; i++) {
-		hashdata hash;
-		hash.count = 0;
-		hash.depth = 0;
-		hash.curPiece = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
-		hash.NextCurPiece = { 0,0,0,0 };
-		hash.NextHashvalue = 0;
-		hash.MaxDepth = 0;
-		hash.lDCount = { 0,0,0,0,0,0,0,0,0,0,0,0,0,0 };
-		//hashtable[i] = hash;		//map
-		hashtable.push_back(hash);	//vector
-	}
+	hashtable.resize(hashsize);
+	//hashtable.reserve(hashsize);
+
+	AEMindex = 0;
+	AOMindex = 0;
+	EAEMindex = 0;
+	EAOMindex = 0;
+
 }
 
 void IndexToBoard(int indexa, int indexb, string& src, string& dst)
